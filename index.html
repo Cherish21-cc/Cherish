@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2027 届校招信息汇总 · 全网企业投递指南</title>
+<meta name="description" content="2027 届（27届）中国校园招聘信息汇总：166 家企业的行业、公司性质、投递渠道、招聘节奏与实用备注，含校招时间轴、投递进度看板与避坑指南。">
+<meta name="keywords" content="2027校招,27届,校园招聘,秋招,春招,提前批,国企,央企,投递渠道">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23c8102e'/><text y='72' x='50' text-anchor='middle' font-size='58' font-family='sans-serif' font-weight='bold' fill='white'>27</text></svg>">
+<link rel="stylesheet" href="assets/css/style.css">
+<script>
+  (function(){
+    var t = null;
+    try { t = localStorage.getItem("cz2027-theme"); } catch(e){}
+    if(!t) t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  })();
+</script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo"><span class="logo-mark">27</span><span>2027 届校招汇总</span></div>
+    <nav class="navlinks">
+      <a href="#calendar">校招日历</a>
+      <a href="#companies">企业名录</a>
+      <a href="#board">我的投递</a>
+      <a href="#channels">投递渠道</a>
+      <a href="#tips">避坑指南</a>
+      <button class="icon-btn" id="themeBtn" title="切换深色/浅色模式" aria-label="切换主题">◐</button>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="wrap">
+    <span class="eyebrow">● 面向 2027 届毕业生 · 数据更新于 <span id="updated"></span></span>
+    <h1>2027 届校园招聘信息汇总</h1>
+    <p class="lede">
+      把分散在各处的校招信息整理成一张表：<strong>公司名称、所属行业、公司性质、投递渠道、招聘节奏</strong>，
+      再加上每家公司的实用备注。可以按行业和性质筛选、收藏心仪企业、记录投递进度，并导出成表格。
+      祝你早日上岸。
+    </p>
+    <div class="stats">
+      <div class="stat"><b id="s-total">—</b><span>收录企业/机构</span></div>
+      <div class="stat"><b id="s-ind">—</b><span>覆盖行业</span></div>
+      <div class="stat"><b id="s-soe">—</b><span>央企 / 国企</span></div>
+      <div class="stat"><b id="s-fav">0</b><span>我的收藏</span></div>
+      <div class="stat"><b id="s-applied">0</b><span>已投递</span></div>
+    </div>
+  </div>
+</div>
+
+<section id="calendar">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>2027 届校招时间轴</h2>
+      <p>校招最贵的成本不是能力，而是错过时间窗口。下面标注了每个阶段该做的事，浅色的是已经过去的节点。</p>
+    </div>
+    <div class="timeline" id="timeline"></div>
+  </div>
+</section>
+
+<section id="companies">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>企业名录</h2>
+      <p>点击「投递入口」直达该公司官方招聘页；如果链接失效或打不开，用旁边的「搜一下」按公司名搜索最新公告。<strong>所有时间与岗位以官网公告为准。</strong></p>
+    </div>
+
+    <div class="filters">
+      <div class="searchrow">
+        <div class="search"><input type="search" id="q" placeholder="搜索公司名 / 行业 / 城市 / 岗位，例如：电气、上海、算法、编制"></div>
+        <select class="ctrl" id="cityF"><option value="">按工作地筛选（全部）</option></select>
+        <select class="ctrl" id="sortF">
+          <option value="default">默认排序</option>
+          <option value="name">按公司名 A→Z</option>
+          <option value="nature">按公司性质</option>
+          <option value="industry">按行业</option>
+        </select>
+      </div>
+      <div class="frow"><span class="flabel">行业</span><div class="chips" id="indChips"></div></div>
+      <div class="frow"><span class="flabel">性质</span><div class="chips" id="natChips"></div></div>
+      <div class="frow"><span class="flabel">标签</span><div class="chips" id="tagChips"></div></div>
+      <div class="toolbar">
+        <span class="count">共 <b id="cnt">0</b> 家</span>
+        <button class="btn" id="favOnly">☆ 只看收藏</button>
+        <button class="btn" id="undoneOnly">只看未投递</button>
+        <span class="spacer"></span>
+        <button class="btn" id="reset">重置筛选</button>
+        <button class="btn primary" id="exportBtn">导出 CSV</button>
+      </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" hidden><b>没有匹配的企业</b>换个关键词，或点「重置筛选」试试。</div>
+  </div>
+</section>
+
+<section id="board">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>我的投递看板</h2>
+      <p>在企业卡片上把状态改成「已投递 / 笔试 / 面试 / 已拿 Offer」，这里会自动汇总。数据只保存在你自己的浏览器里，不会上传到任何服务器。</p>
+    </div>
+    <div class="board" id="boardStats"></div>
+    <div class="mylist"><div class="tablewrap"><table>
+      <thead><tr><th>公司</th><th>行业</th><th>性质</th><th>状态</th><th>入口</th></tr></thead>
+      <tbody id="myBody"></tbody>
+    </table></div></div>
+  </div>
+</section>
+
+<section id="channels">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>通用投递渠道</h2>
+      <p>除了各公司官网，这些是找到校招信息的主要入口。优先级永远是：<strong>官方渠道 &gt; 学校渠道 &gt; 第三方平台</strong>。</p>
+    </div>
+    <div class="cols" id="channels-list"></div>
+  </div>
+</section>
+
+<section id="tips">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>求职避坑指南</h2>
+      <p>这些坑每年都有人踩，而且代价往往不小。花三分钟看完，可能省下一整年。</p>
+    </div>
+    <div class="cols" id="tips-list"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="disclaimer">
+      <strong>免责声明与使用说明：</strong>本站为个人整理的公益信息汇总，数据基于公开信息编排，<strong>不代表任何企业官方立场</strong>。
+      校招的批次时间、岗位要求、招聘规模每年都会变动，链接也可能调整，
+      <strong>请务必以各公司官方招聘网站与官方公众号发布的公告为最终依据</strong>。
+      本站不收取任何费用、不提供内推、不代投简历；任何声称与本站相关并收费的行为都与本站无关。
+    </div>
+    <div><strong>数据版本：</strong><span id="f-ver"></span> · <strong>最近更新：</strong><span id="f-upd"></span> · 收录 <span id="f-total"></span> 家企业与机构</div>
+    <div><strong>想补充或纠错？</strong>直接编辑仓库里的 <code>assets/js/data.js</code>，按现有格式新增一条即可，页面会自动更新，不需要任何构建工具。</div>
+    <div>愿你在 2027 届秋招里，拿到那个自己真正想要的 offer。 🌱</div>
+  </div>
+</footer>
+
+<button class="icon-btn totop" id="totop" title="回到顶部" aria-label="回到顶部">↑</button>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
