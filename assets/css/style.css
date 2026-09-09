@@ -48,6 +48,33 @@
   --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -12px rgba(0,0,0,.6);
   --shadow-lg:0 4px 12px rgba(0,0,0,.55), 0 24px 48px -20px rgba(0,0,0,.7);
 }
+
+/* 跟随系统深色（未显式选择主题时生效） */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+  --bg:#0e1116;
+  --bg-soft:#141922;
+  --surface:#171c25;
+  --surface-2:#1c222c;
+  --border:#2a313d;
+  --border-strong:#3a424f;
+  --text:#e8ebf0;
+  --text-2:#a4adbb;
+  --text-3:#79828f;
+  --brand:#ff6b7f;
+  --brand-soft:#3a1a22;
+  --brand-deep:#ff8f9f;
+  --accent:#69b4f5;
+  --accent-soft:#16283a;
+  --ok:#4cd0a0;
+  --ok-soft:#122c25;
+  --warn:#e0a94a;
+  --warn-soft:#2e2413;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -12px rgba(0,0,0,.6);
+  --shadow-lg:0 4px 12px rgba(0,0,0,.55), 0 24px 48px -20px rgba(0,0,0,.7);
+}
+}
+
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{

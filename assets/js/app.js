@@ -216,7 +216,7 @@
   }
 
   /* ---------- 导出 CSV ---------- */
-  function exportCSV() {
+  function csvText() {
     var list = filtered();
     var head = ["公司名称", "行业", "公司性质", "总部", "工作地", "招聘岗位", "投递渠道",
       "招聘节奏", "投递入口", "备注", "标签", "我的状态", "是否收藏"];
@@ -228,13 +228,42 @@
     var csv = [head].concat(rows).map(function (r) {
       return r.map(function (f) { return '"' + String(f == null ? "" : f).replace(/"/g, '""') + '"'; }).join(",");
     }).join("\r\n");
-    // BOM 让 Excel 正确识别 UTF-8 中文
-    var blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    // 前置 BOM，Excel 才能正确识别 UTF-8 中文
+    return "\ufeff" + csv;
+  }
+
+  function browserDownload(filename, text) {
+    var blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "2027校招信息_" + new Date().toISOString().slice(0, 10) + ".csv";
+    a.download = filename;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+  }
+
+  function exportCSV() {
+    var btn = $("exportBtn");
+    var filename = "2027校招信息_" + new Date().toISOString().slice(0, 10) + ".csv";
+    var text = csvText();
+
+    // 在 claude.ai 的分享页里，浏览器直接下载被沙箱拦截，
+    // 需要走平台的 downloads 能力；本地/自建托管则走普通浏览器下载。
+    if (window.claude && typeof window.claude.use === "function") {
+      btn.disabled = true;
+      var prev = btn.textContent;
+      btn.textContent = "准备中…";
+      window.claude.use("downloads").then(function (dl) {
+        if (!dl) { browserDownload(filename, text); return; }
+        return dl.save({ filename: filename, data: text });
+      }).catch(function (err) {
+        if (err && err.code === "declined") return;   // 用户主动取消，不提示
+        browserDownload(filename, text);
+      }).then(function () {
+        btn.disabled = false; btn.textContent = prev;
+      });
+      return;
+    }
+    browserDownload(filename, text);
   }
 
   /* ---------- 事件绑定 ---------- */
