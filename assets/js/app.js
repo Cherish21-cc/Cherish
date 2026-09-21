@@ -338,6 +338,25 @@
     }, { passive: true });
   }
 
+  /* 价格：支持简单字符串，也支持 {firstLabel, first, regular, note} */
+  function priceHTML(price) {
+    if (!price) return "";
+    if (typeof price === "string") {
+      return '<div class="member-price">' + esc(price) + "</div>";
+    }
+    if (!price.first && !price.regular) return "";
+    return '<div class="member-price">' +
+      (price.first
+        ? '<span class="p-first">' +
+            (price.firstLabel ? '<span class="p-label">' + esc(price.firstLabel) + "</span>" : "") +
+            '<span class="p-amount">' + esc(price.first) + "</span>" +
+          "</span>"
+        : "") +
+      (price.regular ? '<span class="p-regular">' + esc(price.regular) + "</span>" : "") +
+      "</div>" +
+      (price.note ? '<p class="member-renew">' + esc(price.note) + "</p>" : "");
+  }
+
   /* ---------- 更新日志 + 会员入口 ---------- */
   function renderUpdates() {
     var log = window.CHANGELOG || [];
@@ -363,7 +382,7 @@
       '<div class="member-head">' +
         '<div class="member-plat">' + esc(m.platform) + "</div>" +
         '<div class="member-name">' + esc(m.name) + "</div>" +
-        (m.price ? '<div class="member-price">' + esc(m.price) + "</div>" : "") +
+        priceHTML(m.price) +
       "</div>" +
       '<div class="member-body">' +
         '<p class="member-intro">' + esc(m.intro) + "</p>" +

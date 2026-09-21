@@ -369,6 +369,14 @@ footer strong{color:var(--text-2)}
   .updates-layout{grid-template-columns:1fr}
 }
 
+/* 会员价格：首月价突出，常规价跟在后面 */
+.member-price{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 9px;margin-top:8px}
+.p-first{display:flex;align-items:baseline;gap:5px}
+.p-label{font-size:11.5px;font-weight:700;color:#fff;background:var(--brand);padding:2px 7px;border-radius:5px;align-self:center}
+.p-amount{font-size:26px;font-weight:800;color:var(--brand);letter-spacing:-.8px;font-variant-numeric:tabular-nums}
+.p-regular{font-size:13px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.member-renew{margin:6px 0 0;font-size:12px;color:var(--text-3);line-height:1.55}
+
 </style>
 <script>
   (function(){
@@ -602,7 +610,20 @@ window.MEMBERSHIP = {
   platform: "知识星球",           // 知识星球 / 小报童 / 小鹅通，按实际改
   name: "2027 校招更新圈",
   url: "",                        // ← 把你的星球 / 专栏链接填在这里
-  price: "",                      // 例如 "￥49 / 年"；留空则不显示价格
+  /* 价格：可以写成一个字符串（如 "￥49 / 年"），也可以像下面这样
+     拆成首月价 + 常规价。留空或删掉整个 price 则不显示价格。
+
+     ⚠️ note 这行是给用户看的续费说明，必须和你在平台的实际设置一致。
+     知识星球、小报童这类平台通常是「到期手动续费」，拿不到微信支付的
+     委托代扣能力（那需要商户号和营业执照）。所以在确认平台真的支持
+     之前，不要在页面上写「自动续费」「连续包月」——写了但实际不扣款
+     算不上骗人，反过来如果真自动扣款而页面没写清楚，会直接引来投诉。*/
+  price: {
+    firstLabel: "首月",
+    first: "￥9.9",
+    regular: "之后 ￥19.9 / 月",
+    note: "到期需要手动续费，不会自动扣款。"
+  },
   intro: "这个网站会一直免费。如果你希望有人替你盯住每天变动的批次和截止日期，可以来更新圈——你付费买的是持续的人工跟进，不是这张表。",
   includes: [
     "每周更新：新开的批次、新增的企业、已经截止的入口，整理好一次性告诉你",
@@ -1266,6 +1287,25 @@ window.COMPANIES = [
     }, { passive: true });
   }
 
+  /* 价格：支持简单字符串，也支持 {firstLabel, first, regular, note} */
+  function priceHTML(price) {
+    if (!price) return "";
+    if (typeof price === "string") {
+      return '<div class="member-price">' + esc(price) + "</div>";
+    }
+    if (!price.first && !price.regular) return "";
+    return '<div class="member-price">' +
+      (price.first
+        ? '<span class="p-first">' +
+            (price.firstLabel ? '<span class="p-label">' + esc(price.firstLabel) + "</span>" : "") +
+            '<span class="p-amount">' + esc(price.first) + "</span>" +
+          "</span>"
+        : "") +
+      (price.regular ? '<span class="p-regular">' + esc(price.regular) + "</span>" : "") +
+      "</div>" +
+      (price.note ? '<p class="member-renew">' + esc(price.note) + "</p>" : "");
+  }
+
   /* ---------- 更新日志 + 会员入口 ---------- */
   function renderUpdates() {
     var log = window.CHANGELOG || [];
@@ -1291,7 +1331,7 @@ window.COMPANIES = [
       '<div class="member-head">' +
         '<div class="member-plat">' + esc(m.platform) + "</div>" +
         '<div class="member-name">' + esc(m.name) + "</div>" +
-        (m.price ? '<div class="member-price">' + esc(m.price) + "</div>" : "") +
+        priceHTML(m.price) +
       "</div>" +
       '<div class="member-body">' +
         '<p class="member-intro">' + esc(m.intro) + "</p>" +
