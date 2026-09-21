@@ -354,7 +354,83 @@
         : "") +
       (price.regular ? '<span class="p-regular">' + esc(price.regular) + "</span>" : "") +
       "</div>" +
+      (price.bundle
+        ? '<div class="member-bundle">' +
+            '<span class="b-label">' + esc(price.bundle.label) + "</span>" +
+            '<span class="b-amount">' + esc(price.bundle.amount) + "</span>" +
+            (price.bundle.desc ? '<span class="b-desc">' + esc(price.bundle.desc) + "</span>" : "") +
+          "</div>"
+        : "") +
       (price.note ? '<p class="member-renew">' + esc(price.note) + "</p>" : "");
+  }
+
+  /* ---------- 名录顶部：最近更新提示条 ---------- */
+  function daysAgo(dateStr) {
+    var d = new Date(dateStr + "T00:00:00");
+    if (isNaN(d)) return null;
+    return Math.floor((Date.now() - d.getTime()) / 86400000);
+  }
+
+  function renderFreshBar() {
+    var box = $("freshBar");
+    var latest = (window.CHANGELOG || [])[0];
+    if (!latest) { box.innerHTML = ""; return; }
+    var n = daysAgo(latest.date);
+    if (n === null || n > 7) { box.innerHTML = ""; return; }   // 超过 7 天就不吹了
+    var when = n <= 0 ? "今天" : n === 1 ? "昨天" : n + " 天前";
+    var first = (latest.items || [])[0] || "";
+    var more = (latest.items || []).length - 1;
+    box.innerHTML = '<div class="freshbar"><span class="fresh-dot"></span>' +
+      "<span><b>" + esc(when) + "</b>刚更新过：" + esc(first) +
+      (more > 0 ? "，等 " + (more + 1) + " 项" : "") + "</span>" +
+      '<a href="#updates">看更新日志 →</a></div>';
+  }
+
+  /* ---------- 公司避雷墙 ---------- */
+  function renderWarnings() {
+    var w = window.WARNINGS;
+    var box = $("warnBox");
+    if (!w || !w.enabled) { box.innerHTML = ""; return; }
+
+    var rules = '<div class="warn-rules"><strong>这面墙怎么运作：</strong>' +
+      "<ul>" +
+      "<li>所有投稿都经人工核对后才发布，不是实时发言区</li>" +
+      "<li>只发可核实的客观事实（流程、签约、派驻、薪酬与宣讲是否一致），不发主观评价与辱骂</li>" +
+      "<li>不会出现任何个人姓名——HR、面试官都不点名</li>" +
+      "<li>每条都标注来源状态，未经交叉核实的会明确写出来</li>" +
+      "</ul></div>";
+
+    var items = w.items || [];
+    var body;
+    if (!items.length) {
+      body = '<div class="warn-empty"><b>还没有已核实的投稿</b>' +
+        "这面墙靠大家一起填。如果你在面试或签约时遇到过和宣讲会说法不一致的情况，<br>" +
+        "欢迎匿名投稿——写清楚时间、环节和具体发生了什么，核实后会公开。</div>";
+    } else {
+      body = '<div class="warn-list">' + items.map(function (it) {
+        return '<article class="warn-item">' +
+          '<div class="warn-head">' +
+            '<span class="warn-co">' + esc(it.company) + "</span>" +
+            (it.tag ? '<span class="warn-tag">' + esc(it.tag) + "</span>" : "") +
+            (it.date ? '<span class="warn-date">' + esc(it.date) + "</span>" : "") +
+          "</div>" +
+          '<p class="warn-body">' + esc(it.body) + "</p>" +
+          '<span class="warn-state' + (it.verified ? " ok" : "") + '">' +
+            (it.verified ? "已交叉核实" : "用户投稿 · 未经核实") + "</span>" +
+          "</article>";
+      }).join("") + "</div>";
+    }
+
+    var hasForm = !!(w.formUrl && w.formUrl !== "#");
+    var cta = hasForm
+      ? '<a class="warn-cta" href="' + esc(w.formUrl) + '" target="_blank" rel="noopener noreferrer">匿名投稿 ↗</a>'
+      : '<span class="warn-cta todo">投稿表单待配置</span>';
+    var hint = hasForm
+      ? '<span class="warn-note">' + esc(w.contactNote || "") + "</span>"
+      : '<span class="warn-note">建一个腾讯问卷 / 金数据表单，把链接填进 ' +
+        "<code>assets/js/data.js</code> 的 <code>WARNINGS.formUrl</code>。</span>";
+
+    box.innerHTML = rules + body + '<div class="warn-actions">' + cta + hint + "</div>";
   }
 
   /* ---------- 更新日志 + 会员入口 ---------- */
@@ -435,6 +511,8 @@
   /* ---------- 启动 ---------- */
   renderTimeline();
   renderUpdates();
+  renderWarnings();
+  renderFreshBar();
   chipRow("indChips", window.INDUSTRIES || [], "inds", false,
     function (c, v) { return c.industry === v; });
   chipRow("natChips", window.NATURES || [], "nats", true,

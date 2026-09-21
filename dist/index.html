@@ -377,6 +377,61 @@ footer strong{color:var(--text-2)}
 .p-regular{font-size:13px;color:var(--text-2);font-variant-numeric:tabular-nums}
 .member-renew{margin:6px 0 0;font-size:12px;color:var(--text-3);line-height:1.55}
 
+/* ===== 打包档 ===== */
+.member-bundle{
+  display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:10px;padding:9px 12px;
+  border:1px dashed color-mix(in srgb,var(--brand) 35%,transparent);border-radius:var(--radius-sm);
+  background:var(--brand-soft);
+}
+.b-label{font-size:12px;font-weight:700;color:var(--brand-deep)}
+.b-amount{font-size:18px;font-weight:800;color:var(--brand);font-variant-numeric:tabular-nums;letter-spacing:-.4px}
+.b-desc{font-size:11.5px;color:var(--text-2);width:100%;line-height:1.5}
+
+/* ===== 名录顶部更新提示条 ===== */
+.freshbar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;
+  border:1px solid color-mix(in srgb,var(--ok) 28%,transparent);background:var(--ok-soft);
+  border-radius:var(--radius-sm);font-size:13.5px;color:var(--text-2);
+}
+.fresh-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
+.freshbar b{color:var(--ok);font-variant-numeric:tabular-nums}
+.freshbar a{margin-left:auto;color:var(--ok);font-weight:600;text-decoration:none;white-space:nowrap}
+.freshbar a:hover{text-decoration:underline}
+
+/* ===== 避雷墙 ===== */
+.warn-rules{
+  border:1px solid color-mix(in srgb,var(--warn) 26%,transparent);background:var(--warn-soft);
+  border-radius:var(--radius);padding:15px 17px;margin-bottom:16px;font-size:13.3px;
+  color:var(--warn);line-height:1.68;
+}
+.warn-rules strong{color:var(--warn)}
+.warn-rules ul{margin:8px 0 0;padding-left:19px;display:grid;gap:4px}
+.warn-list{display:grid;gap:11px}
+.warn-item{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 16px;box-shadow:var(--shadow);border-left:3px solid var(--warn);
+}
+.warn-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:6px}
+.warn-co{font-weight:700;font-size:15px}
+.warn-tag{font-size:11.5px;padding:2px 8px;border-radius:6px;background:var(--warn-soft);color:var(--warn);font-weight:600}
+.warn-date{font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums;margin-left:auto}
+.warn-body{margin:0;font-size:13.8px;color:var(--text-2);line-height:1.68}
+.warn-state{display:inline-block;margin-top:8px;font-size:11.5px;color:var(--text-3);border:1px solid var(--border);border-radius:999px;padding:2px 9px}
+.warn-state.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+.warn-empty{
+  text-align:center;padding:34px 20px;border:1px dashed var(--border-strong);border-radius:var(--radius);
+  color:var(--text-3);font-size:13.5px;line-height:1.7;background:var(--surface-2);
+}
+.warn-empty b{display:block;color:var(--text-2);font-size:15px;margin-bottom:6px}
+.warn-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.warn-cta{
+  text-decoration:none;padding:9px 16px;border-radius:9px;background:var(--warn);color:#fff;
+  font-size:13.5px;font-weight:600;transition:.15s;
+}
+.warn-cta:hover{filter:brightness(1.08)}
+.warn-cta.todo{background:var(--bg-soft);color:var(--text-3);border:1px dashed var(--border-strong);cursor:default}
+.warn-note{font-size:12px;color:var(--text-3);line-height:1.6;flex:1;min-width:200px}
+
 </style>
 <script>
   (function(){
@@ -397,6 +452,7 @@ footer strong{color:var(--text-2)}
       <a href="#companies">企业名录</a>
       <a href="#board">我的投递</a>
       <a href="#channels">投递渠道</a>
+      <a href="#warnings">避雷墙</a>
       <a href="#tips">避坑指南</a>
       <a href="#updates">更新日志</a>
       <button class="icon-btn" id="themeBtn" title="切换深色/浅色模式" aria-label="切换主题">◐</button>
@@ -439,6 +495,8 @@ footer strong{color:var(--text-2)}
       <h2>企业名录</h2>
       <p>点击「投递入口」直达该公司官方招聘页；如果链接失效或打不开，用旁边的「搜一下」按公司名搜索最新公告。<strong>所有时间与岗位以官网公告为准。</strong></p>
     </div>
+
+    <div id="freshBar"></div>
 
     <div class="filters">
       <div class="searchrow">
@@ -490,6 +548,16 @@ footer strong{color:var(--text-2)}
       <p>除了各公司官网，这些是找到校招信息的主要入口。优先级永远是：<strong>官方渠道 &gt; 学校渠道 &gt; 第三方平台</strong>。</p>
     </div>
     <div class="cols" id="channels-list"></div>
+  </div>
+</section>
+
+<section id="warnings">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>公司避雷墙</h2>
+      <p>同学们匿名投稿、经人工核对后公开的招聘流程问题。<strong>这部分内容永久免费</strong>，不会进付费区。</p>
+    </div>
+    <div id="warnBox"></div>
   </div>
 </section>
 
@@ -622,6 +690,14 @@ window.MEMBERSHIP = {
     firstLabel: "首月",
     first: "￥9.9",
     regular: "之后 ￥19.9 / 月",
+    /* bundle 是可选的打包档。校招是季节性的，一个学生的需求期大概 3—4 个月，
+       按月付要手动续 4 次，中间很容易流失（十月拿到 offer，十一月就不续了）。
+       打包档对用户更划算、对你一次收满，不需要就把整个 bundle 删掉。*/
+    bundle: {
+      label: "整个秋招季",
+      amount: "￥39.9",
+      desc: "9—12 月，一次付清，比按月省 ￥39.8"
+    },
     note: "到期需要手动续费，不会自动扣款。"
   },
   intro: "这个网站会一直免费。如果你希望有人替你盯住每天变动的批次和截止日期，可以来更新圈——你付费买的是持续的人工跟进，不是这张表。",
@@ -637,6 +713,49 @@ window.MEMBERSHIP = {
   ]
 };
 
+/* ============================================================
+   公司避雷墙（用户投稿 + 人工审核后发布）
+   ------------------------------------------------------------
+   ⚠️ 这个板块法律风险最高，上线前请先读完这段。
+
+   1) 必须人工审核后再发布，不要做成实时 UGC。
+      《民法典》第 1195 条规定了「通知—删除」规则：企业发函要求删除
+      而你不及时处理，要承担连带责任。实时发布等于把审核义务架空。
+
+   2) 只发可核实的客观事实，不发主观评价和辱骂。
+      可以发：「宣讲会说工作地在武汉，签约后派驻至县级项目部」
+      不要发：「XX 公司就是黑心血汗工厂」
+      前者是事实陈述，后者是商业诋毁，企业可以直接起诉。
+
+   3) 绝对不要点名个人。HR、面试官的姓名、部门、长相一律不写。
+
+   4) 每条都要标注来源状态（verified 字段），不要让读者误以为
+      未核实的投稿是站方结论。
+
+   5) ★ 最重要：避雷内容必须永久免费，绝对不能放进付费区。
+      「收费才能看企业负面信息」会被认定为以盈利为目的的商业诋毁，
+      性质比单纯转述严重得多，也会毁掉整个站的公信力。
+
+   items 初始为空 —— 我不会替你编造对真实公司的负面指控，
+   那是诽谤。等真实投稿进来、你审核过了再往里加。
+   ============================================================ */
+window.WARNINGS = {
+  enabled: true,
+  formUrl: "",          // ← 投稿表单链接（腾讯问卷 / 金数据 / 问卷星都行）
+  contactNote: "如果你是企业方，认为某条内容不实，可以通过同一个表单提交更正说明，核实后会修改或删除。",
+  items: [
+    /* 审核通过后照这个格式往里加，最新的放最前面：
+    {
+      company: "某公司",
+      date: "2026-10-12",
+      tag: "签约",                       // 流程 / 签约 / 派驻 / 薪酬 / 宣讲不符
+      body: "宣讲会明确说工作地在武汉，三方到手后派驻地写的是县级项目部。",
+      verified: false                    // true = 你已交叉核实过多份投稿
+    },
+    */
+  ]
+};
+
 /* ============ 更新日志 ============
    每次更新数据后在最前面加一条，让持续投入可见。
    date 用 YYYY-MM-DD，items 写这次具体改了什么。            */
@@ -644,6 +763,7 @@ window.CHANGELOG = [
   {
     date: "2026-09-21",
     items: [
+      "新增「公司避雷墙」：可以匿名投稿面试与签约中遇到的问题，人工审核后公开，永久免费",
       "新增「更新日志」板块，之后每次数据更新都会记在这里",
       "复核秋招正式批阶段的时间轴说明，当前处于 8—10 月网申高峰"
     ]
@@ -1303,7 +1423,83 @@ window.COMPANIES = [
         : "") +
       (price.regular ? '<span class="p-regular">' + esc(price.regular) + "</span>" : "") +
       "</div>" +
+      (price.bundle
+        ? '<div class="member-bundle">' +
+            '<span class="b-label">' + esc(price.bundle.label) + "</span>" +
+            '<span class="b-amount">' + esc(price.bundle.amount) + "</span>" +
+            (price.bundle.desc ? '<span class="b-desc">' + esc(price.bundle.desc) + "</span>" : "") +
+          "</div>"
+        : "") +
       (price.note ? '<p class="member-renew">' + esc(price.note) + "</p>" : "");
+  }
+
+  /* ---------- 名录顶部：最近更新提示条 ---------- */
+  function daysAgo(dateStr) {
+    var d = new Date(dateStr + "T00:00:00");
+    if (isNaN(d)) return null;
+    return Math.floor((Date.now() - d.getTime()) / 86400000);
+  }
+
+  function renderFreshBar() {
+    var box = $("freshBar");
+    var latest = (window.CHANGELOG || [])[0];
+    if (!latest) { box.innerHTML = ""; return; }
+    var n = daysAgo(latest.date);
+    if (n === null || n > 7) { box.innerHTML = ""; return; }   // 超过 7 天就不吹了
+    var when = n <= 0 ? "今天" : n === 1 ? "昨天" : n + " 天前";
+    var first = (latest.items || [])[0] || "";
+    var more = (latest.items || []).length - 1;
+    box.innerHTML = '<div class="freshbar"><span class="fresh-dot"></span>' +
+      "<span><b>" + esc(when) + "</b>刚更新过：" + esc(first) +
+      (more > 0 ? "，等 " + (more + 1) + " 项" : "") + "</span>" +
+      '<a href="#updates">看更新日志 →</a></div>';
+  }
+
+  /* ---------- 公司避雷墙 ---------- */
+  function renderWarnings() {
+    var w = window.WARNINGS;
+    var box = $("warnBox");
+    if (!w || !w.enabled) { box.innerHTML = ""; return; }
+
+    var rules = '<div class="warn-rules"><strong>这面墙怎么运作：</strong>' +
+      "<ul>" +
+      "<li>所有投稿都经人工核对后才发布，不是实时发言区</li>" +
+      "<li>只发可核实的客观事实（流程、签约、派驻、薪酬与宣讲是否一致），不发主观评价与辱骂</li>" +
+      "<li>不会出现任何个人姓名——HR、面试官都不点名</li>" +
+      "<li>每条都标注来源状态，未经交叉核实的会明确写出来</li>" +
+      "</ul></div>";
+
+    var items = w.items || [];
+    var body;
+    if (!items.length) {
+      body = '<div class="warn-empty"><b>还没有已核实的投稿</b>' +
+        "这面墙靠大家一起填。如果你在面试或签约时遇到过和宣讲会说法不一致的情况，<br>" +
+        "欢迎匿名投稿——写清楚时间、环节和具体发生了什么，核实后会公开。</div>";
+    } else {
+      body = '<div class="warn-list">' + items.map(function (it) {
+        return '<article class="warn-item">' +
+          '<div class="warn-head">' +
+            '<span class="warn-co">' + esc(it.company) + "</span>" +
+            (it.tag ? '<span class="warn-tag">' + esc(it.tag) + "</span>" : "") +
+            (it.date ? '<span class="warn-date">' + esc(it.date) + "</span>" : "") +
+          "</div>" +
+          '<p class="warn-body">' + esc(it.body) + "</p>" +
+          '<span class="warn-state' + (it.verified ? " ok" : "") + '">' +
+            (it.verified ? "已交叉核实" : "用户投稿 · 未经核实") + "</span>" +
+          "</article>";
+      }).join("") + "</div>";
+    }
+
+    var hasForm = !!(w.formUrl && w.formUrl !== "#");
+    var cta = hasForm
+      ? '<a class="warn-cta" href="' + esc(w.formUrl) + '" target="_blank" rel="noopener noreferrer">匿名投稿 ↗</a>'
+      : '<span class="warn-cta todo">投稿表单待配置</span>';
+    var hint = hasForm
+      ? '<span class="warn-note">' + esc(w.contactNote || "") + "</span>"
+      : '<span class="warn-note">建一个腾讯问卷 / 金数据表单，把链接填进 ' +
+        "<code>assets/js/data.js</code> 的 <code>WARNINGS.formUrl</code>。</span>";
+
+    box.innerHTML = rules + body + '<div class="warn-actions">' + cta + hint + "</div>";
   }
 
   /* ---------- 更新日志 + 会员入口 ---------- */
@@ -1384,6 +1580,8 @@ window.COMPANIES = [
   /* ---------- 启动 ---------- */
   renderTimeline();
   renderUpdates();
+  renderWarnings();
+  renderFreshBar();
   chipRow("indChips", window.INDUSTRIES || [], "inds", false,
     function (c, v) { return c.industry === v; });
   chipRow("natChips", window.NATURES || [], "nats", true,
