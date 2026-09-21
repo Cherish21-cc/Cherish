@@ -303,3 +303,58 @@ footer strong{color:var(--text-2)}
 /* 筛选按钮上的数量 */
 .chip-n{font-size:11px;opacity:.55;font-variant-numeric:tabular-nums;margin-left:2px}
 .chip.on .chip-n,.chip.on-alt .chip-n{opacity:.8}
+
+/* ===== 更新日志 + 会员入口 ===== */
+.updates-layout{display:grid;grid-template-columns:1fr 360px;gap:22px;align-items:start}
+
+/* 更新日志：用时间线而不是卡片堆，顺序本身就是信息 */
+.changelog{list-style:none;margin:0;padding:0 0 0 22px;position:relative;display:grid;gap:20px}
+.changelog::before{content:"";position:absolute;left:4px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.changelog li{position:relative}
+.changelog li::before{
+  content:"";position:absolute;left:-22px;top:6px;width:10px;height:10px;border-radius:50%;
+  background:var(--surface);border:2px solid var(--border-strong);
+}
+.changelog li:first-child::before{border-color:var(--brand);background:var(--brand)}
+.cl-date{
+  font-size:13px;font-weight:700;color:var(--text-2);font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;gap:8px;
+}
+.cl-new{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--brand);color:#fff}
+.changelog ul{margin:7px 0 0;padding:0 0 0 17px;display:grid;gap:4px}
+.changelog ul li{font-size:13.8px;color:var(--text-2);list-style:disc}
+.changelog ul li::before{display:none}
+
+/* 会员入口：与卡片区分开，用实心边框面板 */
+.member{
+  border:1.5px solid color-mix(in srgb,var(--brand) 32%,var(--border));
+  border-radius:var(--radius);background:var(--surface);overflow:hidden;
+}
+.member-head{padding:16px 18px;background:var(--brand-soft);border-bottom:1px solid color-mix(in srgb,var(--brand) 20%,transparent)}
+.member-plat{font-size:11.5px;font-weight:700;letter-spacing:.4px;color:var(--brand);text-transform:uppercase}
+.member-name{font-size:18px;font-weight:800;margin:4px 0 0;letter-spacing:-.3px;color:var(--text)}
+.member-price{font-size:14px;font-weight:700;color:var(--brand);margin-top:3px}
+.member-body{padding:16px 18px;display:grid;gap:14px}
+.member-intro{margin:0;font-size:13.5px;color:var(--text-2);line-height:1.68}
+.member-list{margin:0;padding:0;list-style:none;display:grid;gap:7px}
+.member-list li{font-size:13.2px;color:var(--text-2);padding-left:22px;position:relative;line-height:1.6}
+.member-list li::before{position:absolute;left:0;top:0;font-weight:800;font-size:13px}
+.member-list.yes li::before{content:"✓";color:var(--ok)}
+.member-list.no li::before{content:"×";color:var(--text-3)}
+.member-sub{font-size:11.5px;font-weight:700;color:var(--text-3);letter-spacing:.4px;margin:0}
+.member-cta{
+  display:block;text-align:center;text-decoration:none;padding:11px 16px;border-radius:10px;
+  background:var(--brand);color:#fff;font-weight:700;font-size:14.5px;transition:.15s;
+}
+.member-cta:hover{background:var(--brand-deep)}
+.member-cta.todo{background:var(--bg-soft);color:var(--text-3);border:1px dashed var(--border-strong);cursor:default;font-weight:600}
+.member-hint{margin:0;font-size:12px;color:var(--text-3);line-height:1.6}
+.member-hint code{background:var(--bg-soft);padding:1px 5px;border-radius:4px;font-size:11.5px}
+.member-foot{
+  padding:11px 18px;border-top:1px dashed var(--border);background:var(--surface-2);
+  font-size:12px;color:var(--text-3);line-height:1.6;
+}
+
+@media (max-width:860px){
+  .updates-layout{grid-template-columns:1fr}
+}

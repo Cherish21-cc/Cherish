@@ -314,6 +314,61 @@ footer strong{color:var(--text-2)}
 .chip-n{font-size:11px;opacity:.55;font-variant-numeric:tabular-nums;margin-left:2px}
 .chip.on .chip-n,.chip.on-alt .chip-n{opacity:.8}
 
+/* ===== 更新日志 + 会员入口 ===== */
+.updates-layout{display:grid;grid-template-columns:1fr 360px;gap:22px;align-items:start}
+
+/* 更新日志：用时间线而不是卡片堆，顺序本身就是信息 */
+.changelog{list-style:none;margin:0;padding:0 0 0 22px;position:relative;display:grid;gap:20px}
+.changelog::before{content:"";position:absolute;left:4px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.changelog li{position:relative}
+.changelog li::before{
+  content:"";position:absolute;left:-22px;top:6px;width:10px;height:10px;border-radius:50%;
+  background:var(--surface);border:2px solid var(--border-strong);
+}
+.changelog li:first-child::before{border-color:var(--brand);background:var(--brand)}
+.cl-date{
+  font-size:13px;font-weight:700;color:var(--text-2);font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;gap:8px;
+}
+.cl-new{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--brand);color:#fff}
+.changelog ul{margin:7px 0 0;padding:0 0 0 17px;display:grid;gap:4px}
+.changelog ul li{font-size:13.8px;color:var(--text-2);list-style:disc}
+.changelog ul li::before{display:none}
+
+/* 会员入口：与卡片区分开，用实心边框面板 */
+.member{
+  border:1.5px solid color-mix(in srgb,var(--brand) 32%,var(--border));
+  border-radius:var(--radius);background:var(--surface);overflow:hidden;
+}
+.member-head{padding:16px 18px;background:var(--brand-soft);border-bottom:1px solid color-mix(in srgb,var(--brand) 20%,transparent)}
+.member-plat{font-size:11.5px;font-weight:700;letter-spacing:.4px;color:var(--brand);text-transform:uppercase}
+.member-name{font-size:18px;font-weight:800;margin:4px 0 0;letter-spacing:-.3px;color:var(--text)}
+.member-price{font-size:14px;font-weight:700;color:var(--brand);margin-top:3px}
+.member-body{padding:16px 18px;display:grid;gap:14px}
+.member-intro{margin:0;font-size:13.5px;color:var(--text-2);line-height:1.68}
+.member-list{margin:0;padding:0;list-style:none;display:grid;gap:7px}
+.member-list li{font-size:13.2px;color:var(--text-2);padding-left:22px;position:relative;line-height:1.6}
+.member-list li::before{position:absolute;left:0;top:0;font-weight:800;font-size:13px}
+.member-list.yes li::before{content:"✓";color:var(--ok)}
+.member-list.no li::before{content:"×";color:var(--text-3)}
+.member-sub{font-size:11.5px;font-weight:700;color:var(--text-3);letter-spacing:.4px;margin:0}
+.member-cta{
+  display:block;text-align:center;text-decoration:none;padding:11px 16px;border-radius:10px;
+  background:var(--brand);color:#fff;font-weight:700;font-size:14.5px;transition:.15s;
+}
+.member-cta:hover{background:var(--brand-deep)}
+.member-cta.todo{background:var(--bg-soft);color:var(--text-3);border:1px dashed var(--border-strong);cursor:default;font-weight:600}
+.member-hint{margin:0;font-size:12px;color:var(--text-3);line-height:1.6}
+.member-hint code{background:var(--bg-soft);padding:1px 5px;border-radius:4px;font-size:11.5px}
+.member-foot{
+  padding:11px 18px;border-top:1px dashed var(--border);background:var(--surface-2);
+  font-size:12px;color:var(--text-3);line-height:1.6;
+}
+
+@media (max-width:860px){
+  .updates-layout{grid-template-columns:1fr}
+}
+
 </style>
 <script>
   (function(){
@@ -335,6 +390,7 @@ footer strong{color:var(--text-2)}
       <a href="#board">我的投递</a>
       <a href="#channels">投递渠道</a>
       <a href="#tips">避坑指南</a>
+      <a href="#updates">更新日志</a>
       <button class="icon-btn" id="themeBtn" title="切换深色/浅色模式" aria-label="切换主题">◐</button>
     </nav>
   </div>
@@ -439,6 +495,20 @@ footer strong{color:var(--text-2)}
   </div>
 </section>
 
+<section id="updates">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>持续更新</h2>
+      <p>校招信息每天都在变：批次开了又关，入口改了地址。这里记录每一次更新改了什么。</p>
+    </div>
+
+    <div class="updates-layout">
+      <ol class="changelog" id="changelog"></ol>
+      <aside id="memberBox"></aside>
+    </div>
+  </div>
+</section>
+
 <footer>
   <div class="wrap">
     <div class="disclaimer">
@@ -479,8 +549,8 @@ footer strong{color:var(--text-2)}
    ============================================================ */
 
 window.SITE_META = {
-  updated: "2026-09-09",
-  version: "1.0.0",
+  updated: "2026-09-21",
+  version: "1.1.0",
   targetClass: "2027 届（2027 年 6—7 月毕业）"
 };
 
@@ -509,6 +579,62 @@ window.INDUSTRIES = [
 ];
 
 window.NATURES = ["央企", "国企", "民营", "外企", "合资", "事业单位"];
+
+/* ============================================================
+   会员 / 支持（平台会员制）
+   ------------------------------------------------------------
+   网站本身不收款、不做用户系统：付费内容放在知识星球 / 小报童 /
+   小鹅通这类平台上，由平台代收、处理退款与发票，你在平台提现到
+   银行卡。这里只放一个引流入口。
+
+   启用步骤：
+     1. 在平台开好你的星球 / 专栏
+     2. 把链接填到下面的 url
+     3. 按实际情况改 platform / name / price / includes
+   url 留空时，页面会显示「链接待填写」而不是一个坏掉的按钮。
+
+   注意：excludes 里的两条是这个项目的底线，请不要删——
+   网站的避坑指南第一条就是「付费内推一律不要碰」，
+   收费内容一旦涉及内推或代投，整个站的立场就站不住了。
+   ============================================================ */
+window.MEMBERSHIP = {
+  enabled: true,
+  platform: "知识星球",           // 知识星球 / 小报童 / 小鹅通，按实际改
+  name: "2027 校招更新圈",
+  url: "",                        // ← 把你的星球 / 专栏链接填在这里
+  price: "",                      // 例如 "￥49 / 年"；留空则不显示价格
+  intro: "这个网站会一直免费。如果你希望有人替你盯住每天变动的批次和截止日期，可以来更新圈——你付费买的是持续的人工跟进，不是这张表。",
+  includes: [
+    "每周更新：新开的批次、新增的企业、已经截止的入口，整理好一次性告诉你",
+    "截止日期提醒：国家电网、四大行、三桶油这类大批次网申截止前提前提醒",
+    "补录与捡漏批：秋招补录、春招补缺的公告，这部分信息最分散也最容易错过",
+    "提问答疑：投递批次怎么选、三方条款看不懂，可以直接问"
+  ],
+  excludes: [
+    "不提供内推、不代投简历、不承诺任何 offer",
+    "网站上这 166 家企业的信息永久免费，不会被挪进付费区"
+  ]
+};
+
+/* ============ 更新日志 ============
+   每次更新数据后在最前面加一条，让持续投入可见。
+   date 用 YYYY-MM-DD，items 写这次具体改了什么。            */
+window.CHANGELOG = [
+  {
+    date: "2026-09-21",
+    items: [
+      "新增「更新日志」板块，之后每次数据更新都会记在这里",
+      "复核秋招正式批阶段的时间轴说明，当前处于 8—10 月网申高峰"
+    ]
+  },
+  {
+    date: "2026-09-09",
+    items: [
+      "首次发布：收录 166 家企业与机构，覆盖 20 个行业",
+      "上线校招时间轴、投递看板、通用投递渠道与避坑指南"
+    ]
+  }
+];
 
 /* ============ 2027 届校招时间轴 ============ */
 window.CALENDAR = [
@@ -1140,6 +1266,48 @@ window.COMPANIES = [
     }, { passive: true });
   }
 
+  /* ---------- 更新日志 + 会员入口 ---------- */
+  function renderUpdates() {
+    var log = window.CHANGELOG || [];
+    $("changelog").innerHTML = log.map(function (e, i) {
+      var items = (e.items || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("");
+      return "<li><div class=\"cl-date\">" + esc(e.date) +
+        (i === 0 ? '<span class="cl-new">最新</span>' : "") + "</div>" +
+        "<ul>" + items + "</ul></li>";
+    }).join("");
+
+    var m = window.MEMBERSHIP;
+    var box = $("memberBox");
+    if (!m || !m.enabled) { box.innerHTML = ""; return; }
+
+    var hasUrl = !!(m.url && m.url !== "#");
+    var cta = hasUrl
+      ? '<a class="member-cta" href="' + esc(m.url) + '" target="_blank" rel="noopener noreferrer">去' + esc(m.platform) + " 看看 ↗</a>"
+      : '<span class="member-cta todo">链接待填写</span>' +
+        '<p class="member-hint">把你的' + esc(m.platform) +
+        '链接填进 <code>assets/js/data.js</code> 的 <code>MEMBERSHIP.url</code>，这个按钮就会生效。</p>';
+
+    box.innerHTML = '<div class="member">' +
+      '<div class="member-head">' +
+        '<div class="member-plat">' + esc(m.platform) + "</div>" +
+        '<div class="member-name">' + esc(m.name) + "</div>" +
+        (m.price ? '<div class="member-price">' + esc(m.price) + "</div>" : "") +
+      "</div>" +
+      '<div class="member-body">' +
+        '<p class="member-intro">' + esc(m.intro) + "</p>" +
+        '<div><p class="member-sub">包含</p><ul class="member-list yes">' +
+          (m.includes || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") +
+        "</ul></div>" +
+        '<div><p class="member-sub">不包含</p><ul class="member-list no">' +
+          (m.excludes || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") +
+        "</ul></div>" +
+        cta +
+      "</div>" +
+      '<div class="member-foot">付费与退款均由' + esc(m.platform) +
+        '处理，本站不经手任何款项，也不会向你索取银行卡或验证码。</div>' +
+      "</div>";
+  }
+
   /* ---------- 静态区块 ---------- */
   function renderStatic() {
     $("channels-list").innerHTML = (window.CHANNELS || []).map(function (c) {
@@ -1175,6 +1343,7 @@ window.COMPANIES = [
 
   /* ---------- 启动 ---------- */
   renderTimeline();
+  renderUpdates();
   chipRow("indChips", window.INDUSTRIES || [], "inds", false,
     function (c, v) { return c.industry === v; });
   chipRow("natChips", window.NATURES || [], "nats", true,

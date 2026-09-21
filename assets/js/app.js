@@ -338,6 +338,48 @@
     }, { passive: true });
   }
 
+  /* ---------- 更新日志 + 会员入口 ---------- */
+  function renderUpdates() {
+    var log = window.CHANGELOG || [];
+    $("changelog").innerHTML = log.map(function (e, i) {
+      var items = (e.items || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("");
+      return "<li><div class=\"cl-date\">" + esc(e.date) +
+        (i === 0 ? '<span class="cl-new">最新</span>' : "") + "</div>" +
+        "<ul>" + items + "</ul></li>";
+    }).join("");
+
+    var m = window.MEMBERSHIP;
+    var box = $("memberBox");
+    if (!m || !m.enabled) { box.innerHTML = ""; return; }
+
+    var hasUrl = !!(m.url && m.url !== "#");
+    var cta = hasUrl
+      ? '<a class="member-cta" href="' + esc(m.url) + '" target="_blank" rel="noopener noreferrer">去' + esc(m.platform) + " 看看 ↗</a>"
+      : '<span class="member-cta todo">链接待填写</span>' +
+        '<p class="member-hint">把你的' + esc(m.platform) +
+        '链接填进 <code>assets/js/data.js</code> 的 <code>MEMBERSHIP.url</code>，这个按钮就会生效。</p>';
+
+    box.innerHTML = '<div class="member">' +
+      '<div class="member-head">' +
+        '<div class="member-plat">' + esc(m.platform) + "</div>" +
+        '<div class="member-name">' + esc(m.name) + "</div>" +
+        (m.price ? '<div class="member-price">' + esc(m.price) + "</div>" : "") +
+      "</div>" +
+      '<div class="member-body">' +
+        '<p class="member-intro">' + esc(m.intro) + "</p>" +
+        '<div><p class="member-sub">包含</p><ul class="member-list yes">' +
+          (m.includes || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") +
+        "</ul></div>" +
+        '<div><p class="member-sub">不包含</p><ul class="member-list no">' +
+          (m.excludes || []).map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") +
+        "</ul></div>" +
+        cta +
+      "</div>" +
+      '<div class="member-foot">付费与退款均由' + esc(m.platform) +
+        '处理，本站不经手任何款项，也不会向你索取银行卡或验证码。</div>' +
+      "</div>";
+  }
+
   /* ---------- 静态区块 ---------- */
   function renderStatic() {
     $("channels-list").innerHTML = (window.CHANNELS || []).map(function (c) {
@@ -373,6 +415,7 @@
 
   /* ---------- 启动 ---------- */
   renderTimeline();
+  renderUpdates();
   chipRow("indChips", window.INDUSTRIES || [], "inds", false,
     function (c, v) { return c.industry === v; });
   chipRow("natChips", window.NATURES || [], "nats", true,

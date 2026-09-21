@@ -84,12 +84,64 @@ node -e "global.window={};require('./assets/js/data.js');
   console.log('共',c.length,'条，校验完成');"
 ```
 
+## 会员入口怎么启用
+
+网站本身**不收款、不做用户系统**——付费内容放在知识星球 / 小报童 / 小鹅通这类平台，
+由平台代收、处理退款和发票，你在平台提现到银行卡。网站只做免费引流。
+
+启用三步：
+
+1. 在平台开好你的星球 / 专栏
+2. 打开 `assets/js/data.js`，找到 `window.MEMBERSHIP`，把链接填进 `url`
+3. 按实际情况改 `platform`、`name`、`price`、`includes`
+
+```js
+window.MEMBERSHIP = {
+  enabled: true,
+  platform: "知识星球",
+  name: "2027 校招更新圈",
+  url: "https://t.zsxq.com/你的链接",   // ← 填这里
+  price: "￥49 / 年",                   // 留空则不显示
+  includes: [ /* 会员包含什么 */ ],
+  excludes: [ /* 明确不包含什么 */ ]
+};
+```
+
+`url` 留空时页面显示「链接待填写」，不会出现一个点了没反应的坏按钮。
+把 `enabled` 改成 `false` 可以整块隐藏。
+
+**`excludes` 里的两条请不要删**：
+
+- 不提供内推、不代投简历、不承诺 offer
+- 网站上这 166 家企业的信息永久免费，不会被挪进付费区
+
+网站避坑指南的第一条就是「付费内推一律不要碰，正规企业的内推永远免费」。
+付费内容一旦涉及内推或代投，整个站的立场就站不住了，而且可能触及
+职业中介的监管范围（需要人力资源服务许可证）。卖持续的人工跟进可以，卖这张表不行。
+
+另外两件事自己确认：收入要报税；如果以后想让网站自己收款而不是走平台，
+需要营业执照 + 商户号 + 对公账户 + ICP 备案，个人收款码不能用于经营性收款。
+
+## 每次更新数据后
+
+在 `assets/js/data.js` 的 `window.CHANGELOG` 最前面加一条，页面的「持续更新」
+板块会自动显示，顺便把 `SITE_META.updated` 改成当天日期：
+
+```js
+window.CHANGELOG = [
+  { date: "2026-10-08", items: ["国家电网二批网申开放", "新增 3 家半导体企业"] },
+  // ...旧的记录往下排
+];
+```
+
+这块是会员制能成立的依据——让人看见你确实在持续投入。
+
 ## 项目结构
 
 ```
 index.html                 页面结构
 assets/css/style.css       样式（含深色模式）
-assets/js/data.js          全部数据 —— 要改内容只需要动这个文件
+assets/js/data.js          全部数据、会员配置、更新日志 —— 要改内容只需要动这个文件
 assets/js/app.js           筛选、搜索、收藏、投递状态、CSV 导出
 scripts/build-single.py    打包成单文件 dist/index.html
 ```
