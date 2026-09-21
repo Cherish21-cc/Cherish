@@ -432,6 +432,9 @@ footer strong{color:var(--text-2)}
 .warn-cta.todo{background:var(--bg-soft);color:var(--text-3);border:1px dashed var(--border-strong);cursor:default}
 .warn-note{font-size:12px;color:var(--text-3);line-height:1.6;flex:1;min-width:200px}
 
+/* 会员卡片关闭时，更新日志独占整行 */
+.updates-layout.solo{grid-template-columns:1fr}
+
 </style>
 <script>
   (function(){
@@ -674,7 +677,9 @@ window.NATURES = ["央企", "国企", "民营", "外企", "合资", "事业单�
    收费内容一旦涉及内推或代投，整个站的立场就站不住了。
    ============================================================ */
 window.MEMBERSHIP = {
-  enabled: true,
+  /* 关着。想做会员制时改成 true，并把 url 填上即可，
+     下面的配置都保留着，不用重写。*/
+  enabled: false,
   platform: "知识星球",           // 知识星球 / 小报童 / 小鹅通，按实际改
   name: "2027 校招更新圈",
   url: "",                        // ← 把你的星球 / 专栏链接填在这里
@@ -740,7 +745,9 @@ window.MEMBERSHIP = {
    那是诽谤。等真实投稿进来、你审核过了再往里加。
    ============================================================ */
 window.WARNINGS = {
-  enabled: true,
+  /* 关着。建好投稿表单、并读完上面那五条规则之后，
+     把这里改成 true 并填 formUrl 即可。*/
+  enabled: false,
   formUrl: "",          // ← 投稿表单链接（腾讯问卷 / 金数据 / 问卷星都行）
   contactNote: "如果你是企业方，认为某条内容不实，可以通过同一个表单提交更正说明，核实后会修改或删除。",
   items: [
@@ -763,8 +770,8 @@ window.CHANGELOG = [
   {
     date: "2026-09-21",
     items: [
-      "新增「公司避雷墙」：可以匿名投稿面试与签约中遇到的问题，人工审核后公开，永久免费",
       "新增「更新日志」板块，之后每次数据更新都会记在这里",
+      "企业名录顶部会显示最近 7 天内的更新，超过 7 天自动隐藏",
       "复核秋招正式批阶段的时间轴说明，当前处于 8—10 月网申高峰"
     ]
   },
@@ -1459,7 +1466,15 @@ window.COMPANIES = [
   function renderWarnings() {
     var w = window.WARNINGS;
     var box = $("warnBox");
-    if (!w || !w.enabled) { box.innerHTML = ""; return; }
+    var sec = document.getElementById("warnings");
+    if (!w || !w.enabled) {
+      box.innerHTML = "";
+      if (sec) sec.hidden = true;                                  // 连标题一起藏
+      var nav = document.querySelector('.navlinks a[href="#warnings"]');
+      if (nav) nav.hidden = true;
+      return;
+    }
+    if (sec) sec.hidden = false;
 
     var rules = '<div class="warn-rules"><strong>这面墙怎么运作：</strong>' +
       "<ul>" +
@@ -1514,7 +1529,13 @@ window.COMPANIES = [
 
     var m = window.MEMBERSHIP;
     var box = $("memberBox");
-    if (!m || !m.enabled) { box.innerHTML = ""; return; }
+    var layout = box.parentNode;
+    if (!m || !m.enabled) {
+      box.innerHTML = "";
+      layout.classList.add("solo");   // 没有侧栏时改成单列，右边不留空
+      return;
+    }
+    layout.classList.remove("solo");
 
     var hasUrl = !!(m.url && m.url !== "#");
     var cta = hasUrl

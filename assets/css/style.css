@@ -421,3 +421,6 @@ footer strong{color:var(--text-2)}
 .warn-cta:hover{filter:brightness(1.08)}
 .warn-cta.todo{background:var(--bg-soft);color:var(--text-3);border:1px dashed var(--border-strong);cursor:default}
 .warn-note{font-size:12px;color:var(--text-3);line-height:1.6;flex:1;min-width:200px}
+
+/* 会员卡片关闭时，更新日志独占整行 */
+.updates-layout.solo{grid-template-columns:1fr}

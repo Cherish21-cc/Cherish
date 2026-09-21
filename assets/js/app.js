@@ -390,7 +390,15 @@
   function renderWarnings() {
     var w = window.WARNINGS;
     var box = $("warnBox");
-    if (!w || !w.enabled) { box.innerHTML = ""; return; }
+    var sec = document.getElementById("warnings");
+    if (!w || !w.enabled) {
+      box.innerHTML = "";
+      if (sec) sec.hidden = true;                                  // 连标题一起藏
+      var nav = document.querySelector('.navlinks a[href="#warnings"]');
+      if (nav) nav.hidden = true;
+      return;
+    }
+    if (sec) sec.hidden = false;
 
     var rules = '<div class="warn-rules"><strong>这面墙怎么运作：</strong>' +
       "<ul>" +
@@ -445,7 +453,13 @@
 
     var m = window.MEMBERSHIP;
     var box = $("memberBox");
-    if (!m || !m.enabled) { box.innerHTML = ""; return; }
+    var layout = box.parentNode;
+    if (!m || !m.enabled) {
+      box.innerHTML = "";
+      layout.classList.add("solo");   // 没有侧栏时改成单列，右边不留空
+      return;
+    }
+    layout.classList.remove("solo");
 
     var hasUrl = !!(m.url && m.url !== "#");
     var cta = hasUrl
