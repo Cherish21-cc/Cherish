@@ -1,0 +1,1239 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Brand Lab 策略工作台</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Brand Lab｜Brand Strategy Workbench：从项目定义到策略报告的品牌策略工作台（规则型原型，未接入 AI，数据只保存在本地浏览器）。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%231E2B27'/%3E%3Cpath d='M18 46V18h14a8 8 0 0 1 0 16H18m14 0a8 8 0 0 1 0 12H18' fill='none' stroke='%23C6D39B' stroke-width='5'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&display=swap">
+<style>
+/* Layout: 左侧流程导航 + 右侧“输入 | 输出/检查”两栏工作区；手机端导航变为顶部横向条，两栏堆叠为一栏 */
+:root{
+  --bg:#F6F4ED; --surface:#FBFAF5; --fg:#1E2B27; --muted:#697369; --line:#D5D9CD;
+  --accent:#57715B; --accent-ink:#F6F4ED; --lime:#C6D39B; --sage:#E0E7D8;
+  --ok:#3E6B48; --info:#8A5F12; --hyp:#4E5F86; --risk:#A3402F;
+  --ok-bg:#E3ECDF; --info-bg:#F3E9D2; --hyp-bg:#E3E7F0; --risk-bg:#F4E0DA;
+  --f-display:"Noto Serif SC","Songti SC","STSong",serif;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:4px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#131917; --surface:#18201D; --fg:#E4E9DF; --muted:#9BA59B; --line:#2C3632;
+  --accent:#93AE95; --accent-ink:#131917; --lime:#C6D39B; --sage:#1F2925;
+  --ok:#8DBE95; --info:#DDB063; --hyp:#A3B2D6; --risk:#E58A77;
+  --ok-bg:#1E2D23; --info-bg:#30281A; --hyp-bg:#20263A; --risk-bg:#3A221D; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#131917; --surface:#18201D; --fg:#E4E9DF; --muted:#9BA59B; --line:#2C3632;
+  --accent:#93AE95; --accent-ink:#131917; --lime:#C6D39B; --sage:#1F2925;
+  --ok:#8DBE95; --info:#DDB063; --hyp:#A3B2D6; --risk:#E58A77;
+  --ok-bg:#1E2D23; --info-bg:#30281A; --hyp-bg:#20263A; --risk-bg:#3A221D; color-scheme:dark }
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.6}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- Top bar ---------- */
+.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:12px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  border-bottom:1px solid var(--line);background:var(--bg)}
+.mark{display:flex;align-items:baseline;gap:10px;text-decoration:none;color:var(--fg)}
+.mark b{font-family:var(--f-display);font-size:20px;letter-spacing:.02em}
+.mark span{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.top .proj{font-size:14px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40ch}
+.top .proj strong{color:var(--fg);font-weight:500}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.badge{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.badge.ex{background:var(--lime);border-color:var(--lime);color:#1E2B27;font-weight:500}
+.badge.rule{border-style:dashed}
+
+/* ---------- Shell ---------- */
+.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:calc(100vh - 60px)}
+nav.flow{border-right:1px solid var(--line);padding:20px 0 24px;position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto}
+nav.flow ol{list-style:none;margin:0;padding:0}
+nav.flow a{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:6px;padding:8px 16px 8px 20px;color:var(--fg);text-decoration:none;font-size:14px;border-left:3px solid transparent}
+nav.flow a:hover{background:var(--sage)}
+nav.flow a[aria-current="page"]{border-left-color:var(--accent);background:var(--sage);font-weight:500}
+nav.flow .n{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.dot{width:26px;height:4px;border-radius:2px;background:var(--line);position:relative;overflow:hidden}
+.dot i{position:absolute;inset:0 auto 0 0;background:var(--accent)}
+.dot.opt{background:none;border:1px dashed var(--line)}
+.navnote{margin:20px 20px 0;font-size:12px;color:var(--muted);line-height:1.5}
+main{min-width:0;padding-block:28px 64px;padding-left:clamp(16px,3.4vw,48px);padding-right:max(16px,env(safe-area-inset-right,0px),3.4vw)}
+.wrap{max-width:1240px}
+
+/* ---------- Banner ---------- */
+.banner{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 14px;margin-bottom:24px;background:var(--sage);border-left:3px solid var(--lime);font-size:13.5px}
+.banner p{margin:0;flex:1 1 320px;min-width:0}
+
+/* ---------- Module head ---------- */
+.mod-head{margin-bottom:20px;max-width:72ch}
+.eyebrow{margin:0 0 4px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;gap:10px}
+.eyebrow .num{color:var(--accent);font-weight:500}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(26px,3.2vw,34px);line-height:1.25;margin:0 0 8px;text-wrap:balance}
+h1:focus{outline:none}
+.lead{margin:0;color:var(--muted);max-width:66ch}
+h2{font-family:var(--f-display);font-size:18px;font-weight:600;margin:0 0 12px;text-wrap:balance}
+h3{font-size:14px;font-weight:700;margin:0 0 8px}
+.label-cap{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+
+/* ---------- Method card ---------- */
+details.method{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:0 0 24px;max-width:960px}
+details.method summary{cursor:pointer;padding:10px 0;font-size:14px;display:flex;gap:10px;align-items:center;list-style:none}
+details.method summary::-webkit-details-marker{display:none}
+details.method summary::before{content:"+";font-family:var(--f-mono);width:16px;color:var(--accent)}
+details.method[open] summary::before{content:"−"}
+details.method summary span{font-size:11.5px;letter-spacing:.08em;color:var(--muted)}
+details.method dl{display:grid;grid-template-columns:120px minmax(0,1fr);gap:6px 16px;margin:0 0 14px;font-size:14px}
+details.method dt{color:var(--muted)}
+details.method dd{margin:0}
+
+/* ---------- Grid ---------- */
+.mod-grid{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:36px;align-items:start}
+.col-in,.col-out{min-width:0;display:flex;flex-direction:column;gap:28px}
+.col-out{position:sticky;top:16px}
+fieldset{border:0;padding:0;margin:0;min-width:0;display:flex;flex-direction:column;gap:14px}
+legend{font-family:var(--f-display);font-size:18px;font-weight:600;padding:0;margin-bottom:12px}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label,.flabel{font-size:13px;font-weight:500}
+.field .hint{font-size:12px;color:var(--muted);margin:0}
+input[type=text],textarea,select{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;min-height:40px;font-size:14.5px}
+textarea{resize:vertical;line-height:1.55}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.75}
+input:hover,textarea:hover,select:hover{border-color:var(--muted)}
+input[aria-invalid=true]{border-color:var(--risk)}
+.err{font-size:12px;color:var(--risk);margin:0}
+.suffix{display:flex;align-items:center;gap:6px}
+.suffix span{font-size:13px;color:var(--muted);white-space:nowrap}
+
+/* ---------- Buttons ---------- */
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:14px;text-decoration:none;color:var(--fg)}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:500}
+.btn.ghost{background:none}
+.btn.danger{color:var(--risk)}
+.btn.sm{min-height:32px;padding:3px 10px;font-size:13px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font-size:inherit}
+
+/* scores */
+.score{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.score .st{min-width:0}
+.score .st b{font-weight:500;font-size:14px}
+.score .st p{margin:0;font-size:12px;color:var(--muted)}
+.seg{display:flex;flex:none}
+.seg button{width:34px;height:34px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-family:var(--f-mono);font-size:13px;margin-left:-1px}
+.seg button:first-child{border-radius:var(--r) 0 0 var(--r);margin-left:0}
+.seg button:last-child{border-radius:0 var(--r) var(--r) 0}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);position:relative}
+
+/* list items (editable) */
+.item{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);padding:14px;display:flex;flex-direction:column;gap:12px}
+.item-head{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.item-head .tag{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.layer{border-left:2px solid var(--line);padding-left:12px;display:flex;flex-direction:column;gap:10px}
+.layer .label-cap{color:var(--accent)}
+.checks-inline{display:flex;flex-wrap:wrap;gap:6px}
+.chk{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px;cursor:pointer;background:var(--surface);min-height:32px}
+.chk input{margin:0;accent-color:var(--accent)}
+.chk:has(input:checked){border-color:var(--accent);background:var(--sage)}
+.empty{border:1px dashed var(--line);border-radius:var(--r);padding:18px;color:var(--muted);font-size:14px}
+
+/* ---------- Output panels ---------- */
+.out{border-top:2px solid var(--fg);padding-top:12px;min-width:0}
+.out .sub{font-size:12px;color:var(--muted);margin:-6px 0 12px}
+.stmt{font-family:var(--f-display);font-size:17px;line-height:1.75;margin:0}
+.stmt .gap{color:var(--info);border-bottom:1px dashed var(--info);font-family:var(--f-body);font-size:14px}
+.kv{display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px 12px;margin:0;font-size:14px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;overflow-wrap:anywhere}
+ul.plain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:14px}
+ul.plain li{padding-left:14px;position:relative;overflow-wrap:anywhere}
+ul.plain li::before{content:"";position:absolute;left:0;top:.7em;width:6px;height:1px;background:var(--muted)}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+
+/* check chips */
+.lv{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:3px;font-weight:500;white-space:nowrap}
+.lv.ok{background:var(--ok-bg);color:var(--ok)} .lv.info{background:var(--info-bg);color:var(--info)}
+.lv.hyp{background:var(--hyp-bg);color:var(--hyp)} .lv.risk{background:var(--risk-bg);color:var(--risk)}
+.checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.checklist li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;align-items:baseline}
+.checklist li:last-child{border-bottom:0}
+.checklist .mod{font-size:12px;color:var(--muted)}
+.counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:14px}
+.counts div{background:var(--bg);padding:10px}
+.counts b{display:block;font-family:var(--f-mono);font-size:22px;font-weight:500;line-height:1.2}
+.counts span{font-size:12px}
+.top-issues{counter-reset:ti;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.top-issues li{counter-increment:ti;display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;font-size:14px}
+.top-issues li::before{content:counter(ti);font-family:var(--f-mono);font-size:13px;width:24px;height:24px;border:1px solid var(--fg);display:grid;place-items:center;border-radius:50%}
+.top-issues .go{font-size:12.5px}
+
+/* ---------- Overview ---------- */
+.ov-head{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between;margin-bottom:24px}
+.ov-head .field{width:200px}
+.flowline{display:flex;gap:0;overflow-x:auto;padding:4px 2px 10px;margin-bottom:32px;scrollbar-width:thin}
+.flowline a{flex:1 0 108px;display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--line);margin-left:-1px;text-decoration:none;color:var(--fg);background:var(--surface);position:relative;min-width:108px}
+.flowline a:hover{background:var(--sage)}
+.flowline a .n{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.flowline a b{font-size:13.5px;font-weight:500;line-height:1.3}
+.flowline a .bar{height:4px;background:var(--line);position:relative}
+.flowline a .bar i{position:absolute;inset:0 auto 0 0;background:var(--accent)}
+.flowline a .pct{font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+.ov-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-bottom:36px}
+.ov-grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px;margin-bottom:36px}
+
+/* tables */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--muted);font-size:12px;background:var(--sage);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.c{text-align:center}
+td.r,th.r{text-align:right}
+.ours td{background:color-mix(in srgb,var(--lime) 30%,transparent)}
+.cov{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--accent)}
+.nocov{display:inline-block;width:12px;height:12px;border-radius:50%;border:1px solid var(--line)}
+tr.gaprow td{color:var(--info);font-weight:500}
+
+/* charts */
+svg.chart{width:100%;height:auto;display:block;max-width:100%}
+.chart text{font-family:var(--f-body)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px}
+
+/* budget */
+.alloc{display:flex;height:34px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:repeating-linear-gradient(135deg,transparent 0 6px,var(--sage) 6px 8px)}
+.alloc div{height:100%;min-width:0;border-right:1px solid var(--bg);display:flex;align-items:center;padding:0 6px;font-size:11.5px;overflow:hidden;white-space:nowrap}
+.alloc .over{background:var(--risk);color:#fff}
+.sumline{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:8px;font-size:13.5px}
+.status{font-weight:500}
+.status.ok{color:var(--ok)} .status.info{color:var(--info)} .status.risk{color:var(--risk)}
+.bud-row{display:grid;grid-template-columns:minmax(0,1.3fr) 110px 150px 120px;gap:10px;align-items:end}
+.bud-row .name{font-weight:500;font-size:14px;padding-bottom:9px;overflow-wrap:anywhere}
+
+/* canvas grid */
+.canvas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid var(--line);font-size:13.5px}
+.canvas div{padding:10px 12px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0;overflow-wrap:anywhere}
+.canvas div:nth-child(2n){border-right:0}
+.canvas div.wide{grid-column:1/-1;border-right:0;background:var(--sage)}
+.canvas .label-cap{display:block;margin-bottom:2px}
+.canvas .missing{color:var(--info)}
+
+/* insight board */
+.ib{display:flex;flex-direction:column;gap:14px}
+.ib-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);font-size:13px}
+.ib-row > div{padding:8px 10px;border-right:1px solid var(--line);min-width:0;overflow-wrap:anywhere}
+.ib-row > div:last-child{border-right:0;background:var(--sage)}
+.ib-meta{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line);padding:6px 10px !important;background:var(--surface) !important;border-right:0 !important}
+
+/* report */
+.report{max-width:820px;background:var(--surface);border:1px solid var(--line);padding:clamp(18px,4vw,44px)}
+.report h2{font-size:20px;margin-top:28px;padding-top:14px;border-top:1px solid var(--line)}
+.report h2:first-of-type{margin-top:12px}
+.report .rh{font-family:var(--f-display);font-size:clamp(24px,3vw,30px);margin:0 0 6px}
+.report p{margin:0 0 8px}
+.report-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+
+/* toast & modal */
+.toasts{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:50;max-width:calc(100vw - 32px)}
+.toast{background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:var(--r);font-size:14px;display:flex;gap:12px;align-items:center;box-shadow:0 4px 18px rgba(0,0,0,.18)}
+.toast.bad{background:var(--risk);color:#fff}
+.toast button{background:none;border:1px solid currentColor;color:inherit;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:13px}
+.modal-back{position:fixed;inset:0;background:rgba(20,26,24,.45);display:grid;place-items:center;z-index:60;padding:16px}
+.modal{background:var(--bg);border:1px solid var(--line);padding:22px;max-width:440px;width:100%;border-radius:var(--r)}
+.modal p{margin:0 0 18px}
+
+footer.note{margin-top:48px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);max-width:90ch}
+
+/* ---------- Responsive ---------- */
+@media (max-width:1100px){
+  .mod-grid{grid-template-columns:minmax(0,1fr)}
+  .col-out{position:static}
+  .ov-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+}
+@media (max-width:900px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  nav.flow{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;border-right:0;border-bottom:1px solid var(--line);padding:0;background:var(--bg);max-height:none;overflow-x:auto;overflow-y:hidden}
+  nav.flow ol{display:flex}
+  nav.flow a{grid-template-columns:auto auto;border-left:0;border-bottom:3px solid transparent;padding:12px 12px 9px;white-space:nowrap}
+  nav.flow a[aria-current="page"]{border-bottom-color:var(--accent)}
+  nav.flow .dot{display:none}
+  .navnote{display:none}
+  main{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 56px}
+  .top .proj{max-width:100%;order:3;flex-basis:100%}
+  .badges{margin-left:0}
+}
+@media (max-width:640px){
+  .row2,.row3,.ov-grid,.ov-grid2{grid-template-columns:minmax(0,1fr)}
+  .bud-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .bud-row .name{grid-column:1/-1;padding-bottom:0}
+  .counts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  details.method dl{grid-template-columns:minmax(0,1fr)}
+  details.method dd{margin-bottom:6px}
+  .ib-row{grid-template-columns:minmax(0,1fr)}
+  .ib-row > div{border-right:0;border-bottom:1px solid var(--line)}
+  .canvas{grid-template-columns:minmax(0,1fr)}
+  .canvas div{border-right:0}
+  .score{flex-wrap:wrap}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="mark" href="#overview" aria-label="Brand Lab 策略总览"><b>Brand Lab</b><span>Strategy Workbench</span></a>
+  <div class="proj" id="topProj"></div>
+  <div class="badges" id="topBadges"></div>
+</header>
+<div class="shell">
+  <nav class="flow" aria-label="策略流程"><ol id="nav"></ol><p class="navnote">流程按因果顺序排列：前一步的输出是后一步的输入。条形表示关键字段的填写完成度，不代表质量。</p></nav>
+  <main id="main" tabindex="-1"><div class="wrap" id="view"></div>
+    <footer class="note wrap">当前为<strong>规则型原型，尚未接入 AI</strong>：所有“检查”和“汇总”都来自页面内写死的规则与模板，不会理解开放式语义，也不会检索外部事实。数据只保存在本浏览器的 localStorage（键名 <code>brandlab.v1</code>），不会上传到任何服务器；在“策略总览 → 项目文件”里可以导出、导入或清空。</footer>
+  </main>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div id="modalRoot"></div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+
+<script>
+"use strict";
+/* ================= 常量 ================= */
+const STORE_KEY = "brandlab.v1";
+const STAGES = ["认知","理解","信任","行动","留存/推荐"];
+const GOAL_TYPES = ["销售增长","提升认知","改变品牌联想","提升复购/留存","进入新市场/新人群"];
+const GOAL_METRIC = {"销售增长":["商业"],"提升认知":["品牌"],"改变品牌联想":["品牌"],"提升复购/留存":["商业","行为"],"进入新市场/新人群":["品牌","行为"]};
+const EVIDENCE = ["行为数据","定量调研","定性访谈","二手资料","主观判断"];
+const LV = {ok:"已具备依据",info:"需要补充信息",hyp:"待验证假设",risk:"逻辑风险"};
+const MODS = [
+  {id:"overview",n:"00",t:"策略总览",en:"Strategy Overview"},
+  {id:"brief",n:"01",t:"项目定义",en:"Project Brief"},
+  {id:"market",n:"02",t:"市场与竞争",en:"Market & Competition"},
+  {id:"insight",n:"03",t:"消费者洞察",en:"Consumer Insight"},
+  {id:"position",n:"04",t:"品牌定位",en:"Brand Positioning"},
+  {id:"equity",n:"05",t:"品牌资产与信任",en:"Brand Equity & Trust"},
+  {id:"extension",n:"06",t:"产品与品牌延伸",en:"Product & Extension"},
+  {id:"imc",n:"07",t:"整合传播",en:"Integrated Marketing Communication"},
+  {id:"budget",n:"08",t:"预算与执行",en:"Budget & Execution"},
+  {id:"measure",n:"09",t:"效果评估",en:"Measurement & Learning"},
+  {id:"report",n:"10",t:"策略报告",en:"Strategy Report"}
+];
+const M = Object.fromEntries(MODS.map(m=>[m.id,m]));
+const POS_DIMS = [
+  ["rel","相关性","目标人群是否在乎这个价值"],
+  ["dif","差异性","与竞争者相比能否被感知到不同"],
+  ["cred","可信度","是否有证据让人相信品牌能兑现"],
+  ["clar","易理解","一句话能否被准确复述"],
+  ["sust","可持续性","竞争者是否容易复制"],
+  ["biz","商业可行性","能否支撑价格、毛利与规模"]
+];
+const CBBE = [
+  ["aware","认知 · 显著性","人们在需求出现时是否想得起品牌"],
+  ["meaning","意义 · 表现与形象","人们认为品牌代表什么、联想是否强/独特"],
+  ["response","反应 · 判断与感受","对质量、可信度的判断与情感反应"],
+  ["relation","关系 · 共鸣","忠诚、社群、主动推荐的程度"]
+];
+const EXT_DIMS = [
+  ["fit","品牌契合度","新产品与品牌联想是否自然一致",false],
+  ["value","消费者真实价值","是否解决了真实需求，而不只是品牌想卖",false],
+  ["synergy","与现有产品协同","互补而非蚕食现有产品",false],
+  ["transfer","资产迁移可能性","现有信任、认知能否带到新品类",false],
+  ["dilution","定位稀释风险","分数越高风险越大",true],
+  ["ready","组织/成本/渠道准备度","团队、供应链、渠道是否具备",false]
+];
+
+const METHODS = {
+  brief:{name:"问题定义：SMART 目标 + 事实/假设分离",what:"把目标写成具体、可衡量、有时限的表述，并把已知事实与假设分栏记录。",why:"后续每个模块都以目标为锚点；目标模糊时，任何定位或预算都无法被评价。",how:"用目标类型决定后续需要哪类指标；用事实/假设清单决定哪些地方需要先验证。",miss:"不处理目标之间的取舍，也不判断目标本身是否值得追求。",evidence:"历史销售与渠道数据、财务预算、管理层访谈记录。"},
+  market:{name:"竞争定位 / 感知地图 + 替代方案",what:"在消费者在意的两个维度上，把品牌与直接竞争者、替代品、“不采取行动”放在同一张图里。",why:"定位是相对的，只有看清谁在占据哪块心智空间，才能判断机会。",how:"选两个与购买标准相关的维度作为坐标轴，为每个对象打 0–100 的位置分，查看空白区与拥挤区。",miss:"二维简化会丢掉其他维度；位置分若来自团队主观判断，只代表内部看法。",evidence:"消费者感知调研、对应分析、评论文本、销售终端访谈。"},
+  insight:{name:"观察 → 张力 → 洞察假设（结合 Jobs to Be Done）",what:"先记录在什么情境下做了什么，再写想要什么、担心什么，最后才写解释行为的未满足动机。",why:"把观察与推断分层，防止把营销语言当成消费者事实。",how:"每条洞察都要附证据类型与来源；主观判断只能作为待验证假设。",miss:"洞察的代表性：少量访谈无法说明人群规模。",evidence:"行为数据、日记研究、深访、实地观察、定量验证问卷。"},
+  position:{name:"STP + 感知价值",what:"选择目标人群和情境，决定品牌在哪个参照类别中，以何种差异化理由提供更高的感知价值（收益 − 付出）。",why:"定位是后续传播与预算的唯一共同依据。",how:"填写定位画布，用六个维度自评；自评高但缺证据的维度会被标为逻辑风险。",miss:"自评无法替代消费者测试；画布不处理价格与渠道细节。",evidence:"概念测试、A/B 信息测试、购买意向与支付意愿调研。"},
+  equity:{name:"CBBE 顾客基础品牌资产 + 信号理论",what:"CBBE 从认知、意义、反应到关系逐层构建品牌资产；信号理论关注消费者用哪些可观察线索降低风险。",why:"判断品牌目前卡在哪一层，以及信任缺口来自承诺、证据还是体验。",how:"按四层打分并填写证据；没有证据的高分会被标为待验证。",miss:"框架是分析工具，不是事实；层级之间并非严格按顺序发生。",evidence:"品牌健康度追踪、NPS、评价与口碑、第三方认证。"},
+  extension:{name:"品牌延伸评估：感知契合与资产迁移",what:"评估新产品能否借用现有品牌资产，同时不稀释原有定位。",why:"延伸失败的代价常常落在母品牌上。",how:"六维打分 → 规则给出“进入 / 暂缓 / 不进入”的建议，并要求写止损条件。",miss:"规则阈值是经验设定，不是统计模型；不评估财务回报。",evidence:"延伸概念测试、渠道试销、成本测算。"},
+  imc:{name:"整合营销传播（IMC）+ 消费者旅程",what:"让不同触点在旅程的不同阶段承担不同任务，并用一致的核心信息连接。",why:"渠道应按任务分工，不能因为某渠道流量大就默认它应拿最多资源。",how:"每个渠道写清任务、阶段、信息、期望行为与衡量指标，再看旅程覆盖矩阵是否有断点。",miss:"旅程是简化模型，真实路径是非线性的。",evidence:"触点调研、搜索与访问路径数据、渠道历史表现。"},
+  budget:{name:"组合式预算：基础 / 增长 / 实验",what:"按目的把预算分为维持基础的投入、放大已验证做法的投入，和检验新假设的实验投入。",why:"在信息不足时，需要保留可学习的空间与可止损的边界。",how:"输入总额与各渠道比例，页面实时计算金额、合计与分层占比。",miss:"页面不计算“最优比例”；70/20/10 之类配比只是行业惯例。",evidence:"历史投放回报、增量实验结果、渠道单价与库存。"},
+  measure:{name:"指标体系 + 营销归因与增量实验",what:"把品牌、行为、商业、增量四类指标放在一起，并为每个指标写口径、来源、基准与触发条件。",why:"没有基准和周期的指标无法指导调整。",how:"检查目标类型与指标类型是否匹配，是否有增量指标来区分相关与因果。",miss:"末次点击归因会高估收割渠道、低估品牌建设；相关不等于因果。",evidence:"地理分区实验、对照组、品牌提升调研、营销组合模型（MMM）。"}
+};
+
+/* ================= 数据模型 ================= */
+const T = {
+  competitor:()=>({name:"",kind:"直接竞争",positioning:"",proof:"",strength:"",weakness:"",x:50,y:50}),
+  insight:()=>({segment:"",context:"",observation:"",evidenceType:"定性访谈",source:"",need:"",barrier:"",statement:"",implication:"",validation:"",status:"待验证"}),
+  channel:()=>({name:"",stages:[],task:"",audience:"",message:"",format:"",action:"",metric:"",handoff:"",pct:"",tier:"增长",rationale:"",expected:"",cycle:"",stoploss:""}),
+  metric:()=>({type:"品牌",name:"",def:"",source:"",baseline:"",target:"",window:"",bias:"",trigger:""})
+};
+function blank(){
+  return {
+    meta:{isExample:false,stage:"诊断"},
+    brief:{name:"",category:"",market:"",audience:"",goalType:"",goal:"",metric:"",problem:"",timeframe:"",constraints:"",facts:"",sources:"",assumptions:"",questions:"",decision:""},
+    market:{boundary:"",trends:"",criteria:"",journey:"",xLow:"",xHigh:"",yLow:"",yHigh:"",ours:{x:50,y:50},competitors:[],rules:"",opportunity:"",gaps:""},
+    insights:[],
+    pos:{target:"",need:"",frame:"",value:"",diff:"",proof:"",personality:"",boundary:"",capFit:"",risks:"",scores:{rel:0,dif:0,cred:0,clar:0,sust:0,biz:0}},
+    equity:{levels:{aware:{score:0,evidence:""},meaning:{score:0,evidence:""},response:{score:0,evidence:""},relation:{score:0,evidence:""}},
+      trust:{promise:"",proof:"",consistency:"",wom:"",risk:""}},
+    ext:{enabled:false,name:"",desc:"",scores:{fit:0,value:0,synergy:0,transfer:0,dilution:0,ready:0},conditions:"",stoploss:""},
+    channels:[],
+    budget:{total:""},
+    metrics:[],
+    overview:{next:""}
+  };
+}
+function example(){
+  const s = blank();
+  s.meta = {isExample:true,stage:"定位"};
+  s.brief = {
+    name:"栖山 Qishan（虚构品牌）",category:"无糖原叶冷泡茶饮料 · 上市第 2 年",market:"华东一、二线城市（上海、杭州、南京、苏州）",
+    audience:"25–35 岁写字楼通勤人群，日常以咖啡和含糖饮料提神，想减糖",
+    goalType:"销售增长",goal:"12 个月内华东便利店渠道单店周动销从 6 瓶提升到 10 瓶",metric:"便利店单店周动销（瓶/店/周）、复购率",
+    problem:"消费者知道无糖茶，但在冰柜前更常选择头部品牌；我们的产品在“为什么选你”上没有被记住的理由",
+    timeframe:"2027 年 1–12 月",constraints:"年度营销预算 300 万元（示例）；团队 6 人；便利店铺货已覆盖约 2,400 家",
+    facts:"现有便利店铺货约 2,400 家（内部数据，示例）\n复购用户中 62% 首次购买发生在写字楼周边门店（会员数据，示例）\n冷泡工艺带来较低苦涩度，盲测中有 7/12 人能分辨（内部小样本，示例）",
+    sources:"内部销售系统、会员数据、12 人深访（示例）",
+    assumptions:"“低苦涩”对目标人群足够重要，能驱动换品牌\n写字楼场景是首购的关键情境\n提高冰柜陈列位置能显著提升试用",
+    questions:"低苦涩是否是购买标准的前三名？\n头部品牌的价格带是否限制了我们的溢价空间？",
+    decision:"是否把“冷泡低苦涩”作为核心差异化，并把预算重心从线上种草转向写字楼场景与终端"
+  };
+  s.market = {
+    boundary:"即饮无糖茶，同时与咖啡、含糖茶饮、气泡水争夺“下午提神”场景",
+    trends:"无糖茶货架快速扩容，新品牌增多，终端排面竞争加剧（行业公开报道，需核实具体数字）",
+    criteria:"口感是否苦涩\n是否真的 0 糖\n价格是否在 5–6 元内\n冰柜里是否容易看到",
+    journey:"多数在便利店冰柜前 10 秒内决定；首次尝试多由同事推荐或促销触发",
+    xLow:"功能解渴",xHigh:"情绪/品味",yLow:"大众平价",yHigh:"品质溢价",ours:{x:62,y:66},
+    competitors:[
+      {name:"品牌 A（头部无糖茶）",kind:"直接竞争",positioning:"无糖茶的代名词，品类领导者",proof:"渠道覆盖最广、长期品类教育",strength:"心智份额与冰柜排面",weakness:"口感偏苦涩，品牌老化",x:35,y:52},
+      {name:"品牌 B（新锐果味茶）",kind:"直接竞争",positioning:"好喝的轻负担果茶",proof:"社交平台内容与联名包装",strength:"年轻化、包装吸睛",weakness:"含代糖，“真无糖”存疑",x:78,y:58},
+      {name:"现制茶饮店",kind:"间接替代",positioning:"现做、新鲜、可定制",proof:"门店体验",strength:"口味丰富",weakness:"价格高、等待时间长、含糖",x:84,y:82},
+      {name:"白开水 / 自带杯泡茶",kind:"不采取行动",positioning:"免费、健康",proof:"习惯",strength:"零成本",weakness:"不方便、提神不足",x:20,y:15}
+    ],
+    rules:"终端可见度决定首购；口感决定复购；价格带被头部品牌锚定在 5 元左右",
+    opportunity:"“冷泡低苦涩、真 0 糖”在品质溢价与情绪品味之间存在空白",
+    gaps:"缺少定量数据证明“低苦涩”是关键购买标准\n不清楚目标人群对 6 元价格的接受度"
+  };
+  s.insights = [
+    {segment:"25–35 岁写字楼白领",context:"工作日下午 3 点，在楼下便利店",observation:"12 人深访中 8 人提到曾买过无糖茶但“喝两口就放下”，转而买咖啡",evidenceType:"定性访谈",source:"12 人深访（示例，2026 年 9 月）",need:"想要不靠糖也能提神、喝着舒服",barrier:"担心无糖茶苦涩难喝，“健康但不好喝”",statement:"他们并不排斥无糖，排斥的是为了健康而忍受难喝",implication:"把“好入口”作为差异化，而非继续强调健康",validation:"在 3 家写字楼门店做盲测试饮 + 购买意向问卷（n≥300）",status:"验证中"},
+    {segment:"同上",context:"在社交平台浏览饮品内容",observation:"消费者希望被看作懂生活、有品味的人",evidenceType:"主观判断",source:"",need:"表达自我品味",barrier:"",statement:"选择小众品质茶是一种身份表达",implication:"可能支持更高的视觉与包装投入",validation:"",status:"待验证"}
+  ];
+  s.pos = {
+    target:"25–35 岁、想减糖但不愿忍受苦涩的写字楼通勤人群",need:"工作日下午需要提神、又不想喝糖和咖啡的时刻",
+    frame:"即饮无糖茶中的“好入口”选择",value:"0 糖也顺口，下午喝完一整瓶",
+    diff:"8 小时冷泡工艺，苦涩物质溶出更少",proof:"冷泡工艺专利申请中（示例）；12 人盲测 7 人可分辨（示例，小样本）",
+    personality:"安静、讲究、不说教",boundary:"不贬低竞争者；不使用“最健康”“第一”等无法证明的表述",
+    capFit:"部分一致",risks:"盲测样本过小\n“冷泡”是否被消费者理解尚不确定",
+    scores:{rel:4,dif:4,cred:3,clar:3,sust:2,biz:3}
+  };
+  s.equity = {levels:{aware:{score:2,evidence:"无提示认知率约 8%（2026 年 Q3 小样本调研，示例）"},meaning:{score:3,evidence:"深访中常被描述为“不苦的无糖茶”"},response:{score:4,evidence:""},relation:{score:1,evidence:"会员复购率 18%（示例）"}},
+    trust:{promise:"0 糖、低苦涩",proof:"配料表、第三方检测报告（待取得）",consistency:"不同批次口感波动的投诉约 3%（示例）",wom:"电商评分 4.6/5（示例），评论集中于“顺口”",risk:"担心是代糖或香精调味"}};
+  s.ext = {enabled:true,name:"栖山 冷泡茶包（家庭装）",desc:"把冷泡工艺延伸到可在家冲泡的茶包，进入电商渠道",scores:{fit:4,value:3,synergy:3,transfer:3,dilution:2,ready:2},conditions:"在即饮主线单店动销达到 8 瓶以上后再启动",stoploss:"试销 3 个月复购率低于 15% 即停止"};
+  s.channels = [
+    {name:"写字楼场景试饮与快闪",stages:["认知","信任"],task:"让目标人群在真实情境里亲口验证“不苦”",audience:"写字楼白领 / 首次接触",message:"0 糖也顺口",format:"楼宇大堂试饮、午后茶歇赞助",action:"当场试饮并领取便利店兑换券",metric:"试饮人数、兑换券核销率",handoff:"兑换券引导至周边便利店完成首购",pct:"25",tier:"增长",rationale:"首购多发生在写字楼周边（会员数据，示例）",expected:"核销率 ≥ 12%",cycle:"每 4 周复盘",stoploss:"连续 2 轮核销率 < 6% 暂停"},
+    {name:"便利店冰柜陈列与终端物料",stages:["行动"],task:"在 10 秒决策中被看到、被选择",audience:"冰柜前的所有购买者",message:"冷泡 · 0 糖 · 顺口",format:"冰柜黄金层、价签贴、货架插卡",action:"拿起并购买",metric:"单店周动销、陈列达标率",handoff:"承接试饮与内容带来的需求",pct:"30",tier:"基础",rationale:"终端可见度是品类竞争规则",expected:"达标门店动销 +30%",cycle:"每月",stoploss:"陈列费用占销售额超过 25% 时重新谈判"},
+    {name:"社交平台内容种草",stages:["认知","理解"],task:"解释“冷泡为什么不苦”",audience:"关注健康饮食的年轻职场人",message:"8 小时冷泡，苦涩更少",format:"图文测评、工艺科普短视频",action:"搜索品牌、收藏",metric:"品牌词搜索量、收藏率",handoff:"内容中标注附近可购便利店",pct:"20",tier:"增长",rationale:"",expected:"品牌词搜索量 +40%",cycle:"每 2 周",stoploss:""},
+    {name:"会员与复购激励",stages:["留存/推荐"],task:"把首购者转化为固定饮用者",audience:"已购用户",message:"每天下午那一瓶",format:"瓶盖码积分、同事拼单券",action:"二次购买、推荐同事",metric:"30 天复购率",handoff:"",pct:"10",tier:"基础",rationale:"复购是商业目标的核心",expected:"复购率从 18% 到 24%",cycle:"每月",stoploss:""},
+    {name:"实验：中长视频深度测评",stages:["信任"],task:"检验第三方测评能否提升可信度",audience:"决策前会查资料的人群",message:"盲测对比结果",format:"独立测评合作 2–3 支",action:"观看后搜索品牌",metric:"观看后搜索提升（分组对比）",handoff:"",pct:"8",tier:"实验",rationale:"可信度自评最低，需要检验第三方信号",expected:"搜索提升可被观测",cycle:"8 周",stoploss:"8 周内无可测提升即停止"}
+  ];
+  s.budget = {total:"3000000"};
+  s.metrics = [
+    {type:"品牌",name:"无提示认知率",def:"目标人群中未经提示能说出品牌的比例",source:"季度品牌追踪调研",baseline:"8%",target:"14%",window:"季度",bias:"样本量小、地区代表性",trigger:"连续两季度无提升则重审内容策略"},
+    {type:"行为",name:"品牌词搜索量",def:"主要社交与电商平台品牌词周搜索量",source:"平台后台",baseline:"",target:"+40%",window:"周",bias:"受促销与热点影响",trigger:"4 周无变化则调整内容方向"},
+    {type:"商业",name:"单店周动销",def:"已铺货门店平均每周销售瓶数",source:"便利店系统数据",baseline:"6 瓶",target:"10 瓶",window:"周 / 月",bias:"季节性、门店结构变化",trigger:"达标门店与未达标门店差距 < 10% 时复查陈列"},
+    {type:"增量",name:"写字楼试饮增量销量",def:"试饮楼宇周边门店与对照门店的动销差异",source:"分区对照实验",baseline:"对照组",target:"差异 ≥ 15%",window:"8 周",bias:"门店选择偏差、溢出效应",trigger:"无显著差异则减投试饮"}
+  ];
+  s.overview = {next:"完成 n≥300 的盲测试饮问卷，验证“低苦涩”是否是关键购买标准\n为社交内容渠道补充分配理由与止损条件\n与 2 家便利店系统确认动销数据的取数口径"};
+  return s;
+}
+
+/* ================= 状态与存储 ================= */
+let S, cur = "overview", lastDeleted = null, storageOk = true;
+function merge(base, saved){
+  if (Array.isArray(base)) return Array.isArray(saved) ? saved : base;
+  if (base && typeof base === "object"){
+    const out = {};
+    for (const k of Object.keys(base)) out[k] = (saved && k in saved) ? merge(base[k], saved[k]) : base[k];
+    return out;
+  }
+  return (saved === undefined || saved === null || typeof saved === "object") ? base : saved;
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw){ S = merge(blank(), JSON.parse(raw)); return; }
+  }catch(e){ storageOk = false; }
+  S = example();
+}
+let saveTimer = null;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); storageOk = true; }
+    catch(e){ if (storageOk) toast("浏览器拒绝了本地保存（可能是隐私模式）。数据只在本次打开期间有效，可用“导出项目文件”备份。", true); storageOk = false; }
+  }, 250);
+}
+
+/* ================= 工具 ================= */
+const $ = (s, r=document) => r.querySelector(s);
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const lines = v => String(v||"").split(/\n+/).map(x=>x.trim()).filter(Boolean);
+const has = v => String(v ?? "").trim().length > 0;
+const cut = (v,n=18) => { const s=String(v||"").trim(); return s.length>n ? s.slice(0,n)+"…" : s; };
+function getP(path){ return path.split(".").reduce((o,k)=> o==null ? undefined : o[k], S); }
+function setP(path, v){ const ks=path.split("."); let o=S; for (let i=0;i<ks.length-1;i++){ o=o[ks[i]]; if (o==null) return; } o[ks[ks.length-1]] = v; }
+function toNum(v){ if (v===""||v==null) return NaN; const n = Number(String(v).replace(/[,，\s]/g,"")); return Number.isFinite(n) ? n : NaN; }
+const NF = new Intl.NumberFormat("zh-CN",{maximumFractionDigits:0});
+const PF = new Intl.NumberFormat("zh-CN",{maximumFractionDigits:1});
+function money(n){ return Number.isFinite(n) ? "¥" + NF.format(n) : "—"; }
+const fid = p => "f-" + p.replace(/\./g,"-");
+
+/* 表单片段 */
+function fText(path, label, o={}){
+  return `<div class="field"><label for="${fid(path)}">${label}</label><input type="text" id="${fid(path)}" data-bind="${path}" value="${esc(getP(path))}" placeholder="${esc(o.ph||"")}" autocomplete="off">${o.hint?`<p class="hint">${o.hint}</p>`:""}</div>`;
+}
+function fArea(path, label, o={}){
+  return `<div class="field"><label for="${fid(path)}">${label}</label><textarea id="${fid(path)}" data-bind="${path}" rows="${o.rows||3}" placeholder="${esc(o.ph||"")}">${esc(getP(path))}</textarea>${o.hint?`<p class="hint">${o.hint}</p>`:""}</div>`;
+}
+function fSelect(path, label, opts, o={}){
+  const v = getP(path);
+  return `<div class="field"><label for="${fid(path)}">${label}</label><select id="${fid(path)}" data-bind="${path}">${o.empty?`<option value="">${o.empty}</option>`:""}${opts.map(x=>`<option${x===v?" selected":""}>${esc(x)}</option>`).join("")}</select>${o.hint?`<p class="hint">${o.hint}</p>`:""}</div>`;
+}
+function fNum(path, label, o={}){
+  const v = getP(path);
+  return `<div class="field"><label for="${fid(path)}">${label}</label><div class="suffix"><input type="text" inputmode="decimal" id="${fid(path)}" data-bind="${path}" data-num="1" ${o.min!=null?`data-min="${o.min}"`:""} ${o.max!=null?`data-max="${o.max}"`:""} ${o.amt!=null?`data-amt="${o.amt}"`:""} value="${esc(v)}" placeholder="${esc(o.ph||"")}" aria-describedby="e-${fid(path)}" autocomplete="off">${o.suffix?`<span>${o.suffix}</span>`:""}</div><p class="err" id="e-${fid(path)}" hidden></p></div>`;
+}
+function scoreRow(path, label, desc){
+  const v = getP(path)||0;
+  return `<div class="score"><div class="st"><b id="l-${fid(path)}">${label}</b>${desc?`<p>${desc}</p>`:""}</div><div class="seg" role="group" aria-labelledby="l-${fid(path)}" data-score="${path}">${[1,2,3,4,5].map(n=>`<button type="button" data-act="score" data-path="${path}" data-v="${n}" aria-pressed="${v===n}" aria-label="${label} ${n} 分">${n}</button>`).join("")}</div></div>`;
+}
+function modHead(id, lead){
+  const m = M[id];
+  return `<header class="mod-head"><p class="eyebrow"><span class="num">${m.n}</span><span>${m.en}</span></p><h1 tabindex="-1">${m.t}</h1><p class="lead">${lead}</p></header>`;
+}
+function method(id){
+  const c = METHODS[id]; if (!c) return "";
+  return `<details class="method"><summary><span>方法卡</span>${esc(c.name)}</summary><dl><dt>它是什么</dt><dd>${c.what}</dd><dt>为什么适用</dt><dd>${c.why}</dd><dt>本页如何使用</dt><dd>${c.how}</dd><dt>可能忽略</dt><dd>${c.miss}</dd><dt>可用于验证的证据</dt><dd>${c.evidence}</dd></dl></details>`;
+}
+function outBox(title, derived, sub){
+  return `<section class="out"><h2>${title}</h2>${sub?`<p class="sub">${sub}</p>`:""}<div data-derived="${derived}"></div></section>`;
+}
+function checkBox(mod){ return outBox("质量检查", "checks:"+mod, "规则型检查：根据填写内容的有无、关键词与数值关系判断，不理解语义。"); }
+
+/* ================= 质量检查引擎 ================= */
+function runChecks(){
+  const C = [];
+  const add = (mod,lvl,w,msg) => C.push({mod,lvl,w,msg});
+  const b = S.brief, mk = S.market, p = S.pos;
+
+  // 问题定义
+  if (!has(b.name)) add("brief","info",3,"填写品牌/产品名称。");
+  if (!has(b.goal)) add("brief","info",9,"商业目标为空：后续定位、预算和指标都缺少评价锚点。");
+  else if (!/\d/.test(b.goal)) add("brief","info",7,"目标没有数字或时间，无法判断是否达成。可写成“12 个月内复购率从 18% 提升到 25%”。");
+  else add("brief","ok",0,"目标包含可量化的数字。");
+  if (!has(b.goalType)) add("brief","info",5,"选择目标类型，页面才能检查指标是否与目标匹配。");
+  if (!has(b.metric)) add("brief","info",6,"缺少成功指标。");
+  if (!has(b.problem)) add("brief","info",8,"核心问题为空。");
+  const commOnly = /(曝光|声量|知名度|刷屏|爆款|种草|流量|热度)/.test(b.problem) && !/(购买|转化|复购|试用|价格|渠道|铺货|选择|留存)/.test(b.problem);
+  if (has(b.problem) && commOnly && /(销售|复购)/.test(b.goalType)) add("brief","risk",8,`核心问题只描述了传播现象，但目标是「${b.goalType}」。需要说明传播问题如何影响购买，否则可能把商业问题误当成传播问题。`);
+  if (!has(b.facts)) add("brief","info",5,"尚未列出已知事实。");
+  else if (!has(b.sources)) add("brief","info",4,"已列出事实，但没有写信息来源。");
+  else add("brief","ok",0,`已记录 ${lines(b.facts).length} 条事实及其来源。`);
+  if (!has(b.assumptions)) add("brief","hyp",3,"没有列出关键假设：未写出的假设最容易被当成事实。");
+  else add("brief","hyp",1,`有 ${lines(b.assumptions).length} 条假设待验证，请在后续模块中为它们找证据。`);
+  if (!has(b.decision)) add("brief","info",4,"写下当前最重要的决策，报告会围绕它展开。");
+
+  // 市场与竞争
+  const comps = mk.competitors;
+  if (comps.length < 2) add("market","info",5,"竞争对象少于 2 个，感知地图参考价值有限。");
+  if (comps.length && !comps.some(c=>c.kind!=="直接竞争")) add("market","info",3,"只列出直接竞争者。替代品和“不采取行动”常常才是真正的对手。");
+  const noProof = comps.filter(c=>has(c.name) && !has(c.proof));
+  if (noProof.length) add("market","hyp",2,`${noProof.map(c=>"「"+cut(c.name,12)+"」").join("、")} 没有填写定位证据，目前的判断来自印象。`);
+  if (!has(mk.criteria)) add("market","info",4,"缺少消费者购买标准，无法判断感知地图的坐标轴是否有意义。");
+  if (!(has(mk.xLow)&&has(mk.xHigh)&&has(mk.yLow)&&has(mk.yHigh))) add("market","info",3,"为感知地图的两条坐标轴命名。");
+  if (has(mk.opportunity) && !has(mk.gaps)) add("market","risk",5,"写了机会假设，但没有列出证据缺口。");
+  if (has(mk.opportunity) && has(mk.gaps)) add("market","ok",0,"机会假设与证据缺口均已记录。");
+  for (const c of comps){
+    if (!has(c.name)) continue;
+    const d = Math.hypot((toNum(c.x)||0)-(toNum(mk.ours.x)||0),(toNum(c.y)||0)-(toNum(mk.ours.y)||0));
+    if (d < 12) add("market","risk",5,`感知地图上与「${cut(c.name,12)}」的位置几乎重合，差异空间可能不足。`);
+  }
+
+  // 消费者洞察
+  if (!S.insights.length) add("insight","info",8,"还没有洞察。定位需要至少一条有证据的洞察作为依据。");
+  S.insights.forEach((x,i)=>{
+    const tag = `洞察 ${i+1}${has(x.statement)?"「"+cut(x.statement,14)+"」":""}`;
+    if (!has(x.observation)) add("insight","info",5,`${tag}：缺少观察（在什么情境下做了什么）。`);
+    if (x.evidenceType==="主观判断" || !has(x.source)) add("insight","hyp",5,`${tag}：缺少行为或研究证据，目前只能作为假设。`);
+    if (!has(x.need) || !has(x.barrier)) add("insight","info",4,`${tag}：需求与阻力没有同时写出，看不到张力。`);
+    if (/(觉得|认为|希望|想要|渴望|内心|其实|被看作)/.test(x.observation)) add("insight","risk",4,`${tag}：观察中出现推断性词语（如“希望”“觉得”），建议把可看到的行为与推断分开写。`);
+    if (x.status==="已验证" && (x.evidenceType==="主观判断" || !has(x.source))) add("insight","risk",7,`${tag}：标记为“已验证”，但证据类型为主观判断或来源为空。`);
+    if (!has(x.validation)) add("insight","info",3,`${tag}：没有写验证方法。`);
+    if (has(x.source) && x.evidenceType!=="主观判断" && has(x.need) && has(x.barrier)) add("insight","ok",0,`${tag}：有证据来源，并写出了需求与阻力。`);
+  });
+
+  // 定位
+  if (!has(p.target)) add("position","info",8,"定位缺少明确的目标人群。");
+  if (!has(p.diff)) add("position","info",8,"缺少差异化理由。");
+  if (!has(p.proof)) add("position","risk",8,"品牌承诺没有支撑证据，消费者没有理由相信。");
+  if (p.capFit==="不一致") add("position","risk",8,"定位与产品/组织能力不一致，承诺有无法兑现的风险。");
+  else if (p.capFit==="部分一致") add("position","hyp",4,"定位与能力“部分一致”：需写明哪部分能力仍需建设。");
+  else if (p.capFit==="一致") add("position","ok",0,"定位与产品/组织能力一致（自评）。");
+  const sc = p.scores;
+  if (Object.values(sc).some(v=>!v)) add("position","info",3,"六维评估尚未全部打分。");
+  if (sc.cred>=4 && String(p.proof).trim().length<10) add("position","risk",6,"可信度自评 ≥ 4，但支撑证据几乎为空。");
+  if (sc.dif && sc.dif<=2) add("position","risk",6,"差异性自评 ≤ 2：定位可能难以与竞争者区分。");
+  if (sc.sust && sc.sust<=2) add("position","hyp",3,"可持续性自评偏低：差异点可能容易被复制。");
+  if (has(p.target) && has(p.diff) && has(p.proof)) add("position","ok",0,"定位具备目标人群、差异化与证据三要素。");
+  if (S.insights.length && !S.insights.some(x=>x.status!=="待验证")) add("position","hyp",5,"所有洞察都处于“待验证”，定位目前建立在假设之上。");
+
+  // 品牌资产
+  for (const [k,label] of CBBE){
+    const L = S.equity.levels[k];
+    if (!L.score) add("equity","info",2,`「${label.split(" ")[0]}」层尚未评分。`);
+    else if (L.score>=4 && !has(L.evidence)) add("equity","hyp",4,`「${label.split(" ")[0]}」层自评 ${L.score} 分，但没有证据。`);
+  }
+  if (!has(S.equity.trust.proof)) add("equity","info",3,"没有列出可信证据（认证、检测、第三方背书等）。");
+  if (has(S.equity.trust.promise) && has(S.equity.trust.proof)) add("equity","ok",0,"品牌承诺与可信证据均已记录。");
+
+  // 延伸
+  const e = S.ext;
+  if (e.enabled){
+    if (!has(e.name)) add("extension","info",3,"填写延伸产品名称。");
+    if (Object.values(e.scores).some(v=>!v)) add("extension","info",4,"延伸评估六维尚未全部打分，暂不给出建议。");
+    if (!has(e.stoploss)) add("extension","info",5,"延伸方案缺少止损条件。");
+    if (e.scores.dilution>=4) add("extension","risk",6,"定位稀释风险自评 ≥ 4。");
+  }
+
+  // 整合传播
+  const ch = S.channels;
+  if (!ch.length) add("imc","info",8,"还没有渠道。");
+  ch.forEach((c,i)=>{
+    const tag = `渠道「${cut(c.name||"未命名 "+(i+1),12)}」`;
+    if (!has(c.task)) add("imc","info",5,`${tag}：没有写主要任务。`);
+    if (!c.stages.length) add("imc","info",3,`${tag}：没有指定旅程阶段。`);
+    if (!has(c.metric)) add("imc","info",4,`${tag}：没有衡量指标。`);
+  });
+  if (ch.length){
+    const miss = STAGES.filter(s=>!ch.some(c=>c.stages.includes(s)));
+    if (miss.length) add("imc","info",4,`旅程阶段 ${miss.map(s=>"「"+s+"」").join("、")} 没有渠道承担。`);
+    else add("imc","ok",0,"五个旅程阶段都有渠道承担。");
+    const noHand = ch.filter(c=>!has(c.handoff)).length;
+    if (noHand) add("imc","hyp",2,`${noHand} 个渠道没有写与其他渠道的衔接方式。`);
+  }
+
+  // 预算
+  const total = toNum(S.budget.total);
+  if (!(total>0)) add("budget","info",6,"填写总预算后才能计算各渠道金额。");
+  const sum = ch.reduce((a,c)=>a+(toNum(c.pct)||0),0);
+  if (ch.length){
+    if (sum>100.05) add("budget","risk",9,`分配比例合计 ${PF.format(sum)}%，超出 100%。`);
+    else if (sum<99.95) add("budget","info",5,`还有 ${PF.format(100-sum)}% 预算未分配。`);
+    else add("budget","ok",0,"分配比例合计 100%。");
+    if (!ch.some(c=>c.tier==="实验" && toNum(c.pct)>0)) add("budget","risk",5,"没有实验投入：无法检验不确定的渠道假设。");
+    const noStop = ch.filter(c=>toNum(c.pct)>0 && !has(c.stoploss));
+    if (noStop.length) add("budget","info",4,`${noStop.map(c=>"「"+cut(c.name,10)+"」").join("、")} 没有减投/止损条件。`);
+    const top = [...ch].sort((a,b2)=>(toNum(b2.pct)||0)-(toNum(a.pct)||0))[0];
+    if (top && toNum(top.pct)>0 && !has(top.rationale)) add("budget","risk",6,`预算最高的渠道「${cut(top.name,12)}」没有写分配理由。`);
+    const noReason = ch.filter(c=>toNum(c.pct)>0 && !has(c.rationale) && c!==top);
+    if (noReason.length) add("budget","info",3,`${noReason.map(c=>"「"+cut(c.name,10)+"」").join("、")} 缺少分配理由。`);
+  }
+
+  // 效果评估
+  const ms = S.metrics;
+  if (!ms.length) add("measure","info",8,"还没有指标。");
+  const incomplete = ms.filter(m=>!has(m.baseline)||!has(m.source)||!has(m.window));
+  if (incomplete.length) add("measure","info",5,`${incomplete.map(m=>"「"+cut(m.name||"未命名",10)+"」").join("、")} 缺少基准值、数据来源或时间窗口。`);
+  if (ms.length && !ms.some(m=>m.type==="增量")) add("measure","hyp",4,"没有增量指标：现有指标只能显示相关性，无法说明营销带来的增量。");
+  if (ms.some(m=>/(末次点击|last.?click|ROAS|ROI)/i.test(m.name+m.def)) && !ms.some(m=>m.type==="增量")) add("measure","risk",5,"使用了归因类指标但没有增量验证，末次点击会高估收割渠道。");
+  if (has(b.goalType) && ms.length){
+    const need = GOAL_METRIC[b.goalType]||[];
+    const lack = need.filter(t=>!ms.some(m=>m.type===t));
+    if (lack.length) add("measure","risk",7,`目标类型是「${b.goalType}」，但没有${lack.join("、")}指标，指标无法反映目标。`);
+    else add("measure","ok",0,`指标类型覆盖了「${b.goalType}」所需的 ${need.join("、")} 指标。`);
+  }
+  const noTrig = ms.filter(m=>!has(m.trigger));
+  if (noTrig.length) add("measure","info",3,`${noTrig.length} 个指标没有写调整触发条件。`);
+  return C;
+}
+function topIssues(C, n=3){
+  const rank = {risk:3,info:2,hyp:1,ok:0};
+  return C.filter(c=>c.lvl!=="ok" && c.w>=3).sort((a,b)=> b.w-a.w || rank[b.lvl]-rank[a.lvl]).slice(0,n);
+}
+
+/* ================= 完成度 ================= */
+function completion(id){
+  const ratio = arr => arr.length ? arr.filter(Boolean).length/arr.length : 0;
+  const b=S.brief, mk=S.market, p=S.pos;
+  switch(id){
+    case "brief": return ratio(["name","category","market","audience","goalType","goal","metric","problem","timeframe","facts","assumptions","decision"].map(k=>has(b[k])));
+    case "market": return ratio([has(mk.boundary),has(mk.criteria),has(mk.xLow)&&has(mk.xHigh),mk.competitors.length>=2,has(mk.rules),has(mk.opportunity),has(mk.gaps)]);
+    case "insight": return S.insights.length ? ratio(S.insights.flatMap(x=>[has(x.observation),has(x.source),has(x.need),has(x.barrier),has(x.statement),has(x.validation)])) : 0;
+    case "position": return ratio([...["target","need","frame","value","diff","proof","personality","capFit"].map(k=>has(p[k])), ...Object.values(p.scores).map(Boolean)]);
+    case "equity": return ratio([...Object.values(S.equity.levels).map(l=>!!l.score), ...Object.values(S.equity.trust).map(has)]);
+    case "extension": return S.ext.enabled ? ratio([has(S.ext.name),...Object.values(S.ext.scores).map(Boolean),has(S.ext.stoploss)]) : null;
+    case "imc": return S.channels.length ? ratio(S.channels.flatMap(c=>[has(c.task),c.stages.length>0,has(c.message),has(c.metric),has(c.handoff)])) : 0;
+    case "budget": { const sum=S.channels.reduce((a,c)=>a+(toNum(c.pct)||0),0); return S.channels.length ? ratio([toNum(S.budget.total)>0, Math.abs(sum-100)<0.05, ...S.channels.flatMap(c=>[has(c.rationale),has(c.stoploss)])]) : (toNum(S.budget.total)>0?0.2:0); }
+    case "measure": return S.metrics.length ? ratio(S.metrics.flatMap(m=>[has(m.def),has(m.source),has(m.baseline),has(m.target),has(m.window),has(m.trigger)])) : 0;
+  }
+  return null;
+}
+
+/* ================= 派生内容 ================= */
+function gap(t){ return `<span class="gap">待填：${t}</span>`; }
+function val(v, t){ return has(v) ? esc(v) : gap(t); }
+function positioningStatement(){
+  const p=S.pos, n=S.brief.name;
+  return `对于 ${val(p.target,"目标人群")}，在 ${val(p.need,"关键情境/需求")} 时，${val(n,"品牌名称")} 是 ${val(p.frame,"品类与角色")}，提供 ${val(p.value,"价值主张")}；因为 ${val(p.diff,"差异化理由")}，支撑证据是 ${val(p.proof,"证据/能力")}。`;
+}
+function listOrEmpty(arr, empty){ return arr.length ? `<ul class="plain">${arr.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>` : `<p class="muted small">${empty}</p>`; }
+function checksHTML(list){
+  if (!list.length) return `<p class="muted small">暂无检查结果。</p>`;
+  const rank = {risk:0,info:1,hyp:2,ok:3};
+  return `<ul class="checklist">${[...list].sort((a,b)=>rank[a.lvl]-rank[b.lvl]||b.w-a.w).map(c=>`<li><span class="lv ${c.lvl}">${LV[c.lvl]}</span><span>${esc(c.msg)}</span></li>`).join("")}</ul>`;
+}
+function extDecision(){
+  const e=S.ext, s=e.scores;
+  if (!e.enabled) return {d:"未启用",cls:"",why:"当前项目未评估品牌延伸。"};
+  if (Object.values(s).some(v=>!v)) return {d:"信息不足",cls:"info",why:"六个维度未全部打分。"};
+  const pos = ["fit","value","synergy","transfer","ready"].map(k=>s[k]);
+  const avg = pos.reduce((a,b)=>a+b,0)/pos.length;
+  if (s.dilution>=4) return {d:"暂缓",cls:"risk",why:`定位稀释风险 ${s.dilution} 分，先确认母品牌定位不会被削弱。`};
+  if (avg>=3.8 && s.dilution<=2) return {d:"具备进入条件（需验证）",cls:"ok",why:`正向维度均值 ${avg.toFixed(1)}，稀释风险较低。仍需小规模试销验证。`};
+  if (avg<2.5) return {d:"不建议进入",cls:"risk",why:`正向维度均值仅 ${avg.toFixed(1)}。`};
+  const weak = EXT_DIMS.filter(d=>!d[3] && s[d[0]]<=2).map(d=>d[1]);
+  return {d:"暂缓，补齐条件后再评估",cls:"info",why:`正向维度均值 ${avg.toFixed(1)}${weak.length?"；薄弱项："+weak.join("、"):""}。`};
+}
+
+const DERIVED = {
+  checks(mod){ return checksHTML(runChecks().filter(c=>c.mod===mod)); },
+  briefOut(){
+    const b=S.brief;
+    return `<p class="stmt">在 ${val(b.timeframe,"时间范围")} 内，${val(b.name,"品牌")} 需要解决：${val(b.problem,"核心问题")}，以实现 ${val(b.goal,"商业目标")}。</p>
+    <dl class="kv" style="margin-top:14px"><dt>目标类型</dt><dd>${val(b.goalType,"目标类型")}</dd><dt>成功指标</dt><dd>${val(b.metric,"成功指标")}</dd><dt>分析范围</dt><dd>${val(b.market,"市场/地区")} · ${val(b.audience,"目标人群")}</dd><dt>约束</dt><dd>${val(b.constraints,"预算与资源")}</dd><dt>核心决策</dt><dd>${val(b.decision,"最重要的决策")}</dd></dl>
+    <div class="row3" style="margin-top:16px"><div><h3>已知事实</h3>${listOrEmpty(lines(b.facts),"暂无")}</div><div><h3>关键假设</h3>${listOrEmpty(lines(b.assumptions),"暂无")}</div><div><h3>待验证问题</h3>${listOrEmpty(lines(b.questions),"暂无")}</div></div>`;
+  },
+  perceptionMap(){
+    const mk=S.market, W=380,H=320, x0=48,x1=W-16,y0=16,y1=H-40;
+    const px = v=> x0 + (Math.min(100,Math.max(0,toNum(v)||0))/100)*(x1-x0);
+    const py = v=> y1 - (Math.min(100,Math.max(0,toNum(v)||0))/100)*(y1-y0);
+    const pts = mk.competitors.filter(c=>has(c.name)).map(c=>({n:c.name,k:c.kind,x:px(c.x),y:py(c.y),o:false}));
+    pts.push({n:S.brief.name||"我方品牌",k:"我方",x:px(mk.ours.x),y:py(mk.ours.y),o:true});
+    const kindFill = k => k==="我方" ? "var(--accent)" : k==="直接竞争" ? "var(--fg)" : "var(--surface)";
+    const mx=(x0+x1)/2, my=(y0+y1)/2;
+    const label = (t,x,y,a,cls) => `<text x="${x}" y="${y}" text-anchor="${a}" font-size="11" style="fill:var(--muted)">${esc(t)}</text>`;
+    let g = `<rect x="${x0}" y="${y0}" width="${x1-x0}" height="${y1-y0}" style="fill:var(--surface);stroke:var(--line)"/>
+      <line x1="${mx}" y1="${y0}" x2="${mx}" y2="${y1}" style="stroke:var(--line)" stroke-dasharray="3 3"/><line x1="${x0}" y1="${my}" x2="${x1}" y2="${my}" style="stroke:var(--line)" stroke-dasharray="3 3"/>`;
+    g += label("← "+(mk.xLow||"X 低"),x0,y1+18,"start") + label((mk.xHigh||"X 高")+" →",x1,y1+18,"end");
+    g += `<text x="${x0-8}" y="${y1}" text-anchor="end" font-size="11" style="fill:var(--muted)" transform="rotate(-90 ${x0-8} ${y1})" dy="-2">${esc("← "+(mk.yLow||"Y 低"))}</text>`.replace('text-anchor="end"','text-anchor="start"');
+    g += `<text x="${x0-8}" y="${y0}" text-anchor="end" font-size="11" style="fill:var(--muted)" transform="rotate(-90 ${x0-8} ${y0})" dy="-2">${esc((mk.yHigh||"Y 高")+" →")}</text>`;
+    pts.forEach(p=>{
+      const right = p.x < x1-110;
+      g += p.o ? `<rect x="${p.x-7}" y="${p.y-7}" width="14" height="14" transform="rotate(45 ${p.x} ${p.y})" style="fill:var(--accent);stroke:var(--bg);stroke-width:2"/>`
+               : `<circle cx="${p.x}" cy="${p.y}" r="6" style="fill:${kindFill(p.k)};stroke:var(--fg);stroke-width:1.2"/>`;
+      g += `<text x="${p.x+(right?11:-11)}" y="${p.y+4}" text-anchor="${right?"start":"end"}" font-size="11.5" style="fill:var(--fg);font-weight:${p.o?700:400}">${esc(cut(p.n,10))}</text>`;
+    });
+    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="感知地图：横轴 ${esc(mk.xLow)} 到 ${esc(mk.xHigh)}，纵轴 ${esc(mk.yLow)} 到 ${esc(mk.yHigh)}">${g}</svg>
+    <div class="legend"><span><i style="background:var(--accent);transform:rotate(45deg)"></i>我方</span><span><i style="background:var(--fg);border-radius:50%"></i>直接竞争</span><span><i style="background:var(--surface);border:1px solid var(--fg);border-radius:50%"></i>替代品 / 不采取行动</span></div>
+    <p class="small muted">口径：位置分 0–100 由使用者输入，代表${S.meta.isExample?"示例中的":""}团队判断，未经消费者调研验证。</p>`;
+  },
+  compMatrix(){
+    const rows = S.market.competitors.filter(c=>has(c.name));
+    if (!rows.length) return `<p class="muted small">添加竞争对象后生成比较矩阵。</p>`;
+    return `<div class="tablewrap"><table><thead><tr><th>对象</th><th>类型</th><th>定位</th><th>证据</th><th>优势</th><th>弱点</th></tr></thead><tbody>${rows.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.kind)}</td><td>${esc(c.positioning)||"—"}</td><td>${esc(c.proof)||'<span class="lv hyp">无证据</span>'}</td><td>${esc(c.strength)||"—"}</td><td>${esc(c.weakness)||"—"}</td></tr>`).join("")}</tbody></table></div>`;
+  },
+  marketOut(){
+    const mk=S.market;
+    return `<dl class="kv"><dt>竞争规则</dt><dd>${val(mk.rules,"竞争规则摘要")}</dd><dt>机会假设</dt><dd>${val(mk.opportunity,"机会假设")}</dd></dl><h3 style="margin-top:12px">证据缺口</h3>${listOrEmpty(lines(mk.gaps),"尚未列出。")}`;
+  },
+  insightBoard(){
+    if (!S.insights.length) return `<p class="muted small">添加洞察后，这里会按“观察 → 张力 → 洞察假设”三层展示。</p>`;
+    return `<div class="ib">${S.insights.map((x,i)=>{
+      const evid = x.evidenceType==="主观判断"||!has(x.source) ? `<span class="lv hyp">缺少证据</span>` : `<span class="lv ok">${esc(x.evidenceType)}</span>`;
+      return `<div class="ib-row"><div><span class="label-cap">观察</span><br>${val(x.observation,"观察")}</div><div><span class="label-cap">张力</span><br>想要：${val(x.need,"需求")}<br>阻力：${val(x.barrier,"阻力")}</div><div><span class="label-cap">洞察假设</span><br>${val(x.statement,"洞察陈述")}</div><div class="ib-meta"><span class="mono small">#${i+1}</span>${evid}<span class="lv ${x.status==="已验证"?"ok":x.status==="验证中"?"info":"hyp"}">${esc(x.status)}</span><span class="small muted">对决策：${esc(cut(x.implication,40))||"—"}</span></div></div>`;}).join("")}</div>`;
+  },
+  posCanvas(){
+    const p=S.pos;
+    const cell=(k,v,wide)=>`<div${wide?' class="wide"':""}><span class="label-cap">${k}</span>${has(v)?esc(v):'<span class="missing">待填</span>'}</div>`;
+    return `<div class="canvas">${cell("目标人群",p.target)}${cell("关键情境/需求",p.need)}${cell("品类与角色",p.frame)}${cell("价值主张",p.value)}${cell("差异化理由",p.diff)}${cell("支撑证据/能力",p.proof)}${cell("品牌个性",p.personality)}${cell("表达边界",p.boundary)}${cell("与能力一致性",p.capFit)}${cell("风险与待验证",lines(p.risks).join("；"))}</div>`;
+  },
+  posStatement(){ return `<p class="stmt">${positioningStatement()}</p>`; },
+  radar(){
+    const sc=S.pos.scores, cx=150, cy=140, R=96, n=POS_DIMS.length;
+    const pt=(i,r)=>{ const a=-Math.PI/2+i*2*Math.PI/n; return [cx+r*Math.cos(a), cy+r*Math.sin(a)]; };
+    let g="";
+    for (let l=1;l<=5;l++){ g+=`<polygon points="${POS_DIMS.map((_,i)=>pt(i,R*l/5).join(",")).join(" ")}" style="fill:none;stroke:var(--line)"/>`; }
+    POS_DIMS.forEach((d,i)=>{ const [x,y]=pt(i,R); g+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" style="stroke:var(--line)"/>`;
+      const [lx,ly]=pt(i,R+16); const a = Math.abs(lx-cx)<5?"middle":(lx>cx?"start":"end");
+      g+=`<text x="${lx}" y="${ly+4}" text-anchor="${a}" font-size="12" style="fill:var(--fg)">${d[1]} <tspan class="num" style="fill:var(--muted)">${sc[d[0]]||"–"}</tspan></text>`; });
+    const filled = POS_DIMS.every(d=>sc[d[0]]);
+    const poly = POS_DIMS.map((d,i)=>pt(i,R*(sc[d[0]]||0)/5).join(",")).join(" ");
+    g+=`<polygon points="${poly}" style="fill:var(--accent);fill-opacity:.22;stroke:var(--accent);stroke-width:2"/>`;
+    POS_DIMS.forEach((d,i)=>{ if(sc[d[0]]){ const [x,y]=pt(i,R*sc[d[0]]/5); g+=`<circle cx="${x}" cy="${y}" r="3.5" style="fill:var(--accent)"/>`; } });
+    return `<svg class="chart" viewBox="-50 0 400 285" role="img" aria-label="定位六维自评雷达图">${g}</svg><p class="small muted">口径：1–5 分团队自评，${filled?"":"尚未全部打分；"}不是消费者测试结果。</p>`;
+  },
+  pyramid(){
+    const L=S.equity.levels, W=320, h=46, gap=4;
+    let g="";
+    const order=[...CBBE].reverse(); // top: relation
+    order.forEach((d,i)=>{
+      const top=10+i*(h+gap), wTop=60+i*62, wBot=60+(i+1)*62, s=L[d[0]].score;
+      const xT=(W-wTop)/2, xB=(W-wBot)/2;
+      const op = s ? 0.15+0.17*s : 0;
+      g+=`<polygon points="${xT},${top} ${xT+wTop},${top} ${xB+wBot},${top+h} ${xB},${top+h}" style="fill:var(--accent);fill-opacity:${op};stroke:var(--accent);stroke-dasharray:${s?"0":"4 3"}"/>`;
+      g+=`<text x="${W/2}" y="${top+h/2+1}" text-anchor="middle" font-size="12.5" style="fill:${op>0.6?"var(--accent-ink)":"var(--fg)"};font-weight:500">${d[1].split(" · ")[0]}</text>`;
+      g+=`<text x="${W/2}" y="${top+h/2+16}" text-anchor="middle" font-size="11" class="num" style="fill:${op>0.6?"var(--accent-ink)":"var(--muted)"}">${s?s+" / 5":"未评估"}${s&&!has(L[d[0]].evidence)?" · 无证据":""}</text>`;
+    });
+    return `<svg class="chart" viewBox="0 0 ${W} 214" role="img" aria-label="CBBE 品牌资产金字塔">${g}</svg><p class="small muted">口径：底层为认知，顶层为关系；颜色深浅代表 1–5 分自评，虚线为未评估。CBBE 是分析框架，分数本身不是事实。</p>`;
+  },
+  trustOut(){
+    const t=S.equity.trust;
+    return `<dl class="kv"><dt>品牌承诺</dt><dd>${val(t.promise,"承诺")}</dd><dt>可信证据</dt><dd>${val(t.proof,"证据")}</dd><dt>体验一致性</dt><dd>${val(t.consistency,"体验一致性")}</dd><dt>口碑/第三方</dt><dd>${val(t.wom,"口碑与评价")}</dd><dt>感知风险</dt><dd>${val(t.risk,"消费者担心什么")}</dd></dl>`;
+  },
+  extOut(){
+    const e=S.ext; const dec=extDecision();
+    if (!e.enabled) return `<p class="muted small">当前项目未启用品牌延伸评估。勾选左侧“评估一个延伸方案”后开始。</p>`;
+    const bars = EXT_DIMS.map(d=>{ const v=e.scores[d[0]]||0; return `<div style="display:grid;grid-template-columns:132px minmax(0,1fr) 28px;gap:8px;align-items:center;font-size:13px"><span>${d[1]}</span><span style="height:10px;background:var(--line);position:relative"><i style="position:absolute;inset:0 auto 0 0;width:${v*20}%;background:${d[3]?"var(--risk)":"var(--accent)"}"></i></span><span class="num">${v||"–"}</span></div>`; }).join("");
+    return `<div style="display:flex;flex-direction:column;gap:8px">${bars}</div>
+      <div style="margin-top:16px;padding:12px;border:1px solid var(--line)"><span class="label-cap">规则建议（非结论）</span><p style="margin:4px 0 0;font-size:17px;font-family:var(--f-display)" class="status ${dec.cls}">${dec.d}</p><p class="small" style="margin:4px 0 0">${esc(dec.why)}</p></div>
+      <dl class="kv" style="margin-top:12px"><dt>进入条件</dt><dd>${val(e.conditions,"进入/暂缓的条件")}</dd><dt>止损条件</dt><dd>${val(e.stoploss,"止损条件")}</dd></dl>
+      <p class="small muted">规则：稀释风险 ≥ 4 → 暂缓；正向维度均值 ≥ 3.8 且稀释 ≤ 2 → 具备进入条件；均值 &lt; 2.5 → 不建议；其余 → 暂缓并补齐。</p>`;
+  },
+  journey(){
+    const ch=S.channels;
+    if (!ch.length) return `<p class="muted small">添加渠道并勾选旅程阶段后生成覆盖矩阵。</p>`;
+    const cnt = STAGES.map(s=>ch.filter(c=>c.stages.includes(s)).length);
+    return `<div class="tablewrap"><table><thead><tr><th>渠道</th>${STAGES.map(s=>`<th class="c" style="text-align:center">${s}</th>`).join("")}</tr></thead><tbody>${ch.map(c=>`<tr><td>${esc(c.name)||"未命名"}</td>${STAGES.map(s=>`<td class="c">${c.stages.includes(s)?'<span class="cov" aria-label="覆盖"></span>':'<span class="nocov" aria-label="未覆盖"></span>'}</td>`).join("")}</tr>`).join("")}
+    <tr class="${cnt.some(n=>!n)?"gaprow":""}"><td>覆盖渠道数</td>${cnt.map(n=>`<td class="c num">${n||"断点"}</td>`).join("")}</tr></tbody></table></div>`;
+  },
+  channelRoles(){
+    const ch=S.channels.filter(c=>has(c.name));
+    if (!ch.length) return `<p class="muted small">暂无渠道。</p>`;
+    return `<ul class="plain">${ch.map(c=>`<li><b>${esc(c.name)}</b>（${c.stages.map(esc).join(" / ")||"未指定阶段"}）：${val(c.task,"主要任务")}。信息：${val(c.message,"核心信息")}。衡量：${val(c.metric,"指标")}。${has(c.handoff)?"衔接："+esc(c.handoff)+"。":""}</li>`).join("")}</ul>`;
+  },
+  allocation(){
+    const ch=S.channels, total=toNum(S.budget.total);
+    const sum = ch.reduce((a,c)=>a+(toNum(c.pct)||0),0);
+    const tones = ["var(--accent)","var(--lime)","#8FA48C","#B9C6A8","#6F8B72","#DCE3C4","#4A6150","#A8B88F"];
+    let acc = 0;
+    const segs = ch.map((c,i)=>{ const v=Math.max(0,toNum(c.pct)||0); const w = Math.max(0,Math.min(v,100-acc)); acc+=w; return w>0?`<div style="width:${w}%;background:${tones[i%tones.length]};color:${i%tones.length===0||i%tones.length===4||i%tones.length===6?"#F6F4ED":"#1E2B27"}" title="${esc(c.name)} ${PF.format(v)}%">${w>=8?esc(cut(c.name,6)):""}</div>`:""; }).join("");
+    const st = sum>100.05 ? ["risk",`超出 ${PF.format(sum-100)}%`] : sum<99.95 ? ["info",`未分配 ${PF.format(100-sum)}%${total>0?"（"+money(total*(100-sum)/100)+"）":""}`] : ["ok","已全部分配"];
+    const tiers = ["基础","增长","实验"].map(t=>{ const v=ch.filter(c=>c.tier===t).reduce((a,c)=>a+(toNum(c.pct)||0),0); return {t,v}; });
+    return `<div class="alloc" role="img" aria-label="预算分配条，合计 ${PF.format(sum)}%">${segs}${sum>100.05?`<div class="over" style="width:6%">超</div>`:""}</div>
+      <div class="sumline"><span>合计 <b class="num">${PF.format(sum)}%</b>${total>0?` · <span class="num">${money(total*Math.min(sum,100)/100)}</span> / ${money(total)}`:""}</span><span class="status ${st[0]}">${st[1]}</span></div>
+      <div class="legend">${ch.map((c,i)=>`<span><i style="background:${tones[i%tones.length]}"></i>${esc(cut(c.name||"未命名",10))} <span class="num">${PF.format(toNum(c.pct)||0)}%</span></span>`).join("")}</div>
+      <h3 style="margin-top:18px">按投入目的</h3>
+      <div class="tablewrap"><table><thead><tr><th>类型</th><th class="r">比例</th><th class="r">金额</th><th>用途</th></tr></thead><tbody>
+      ${tiers.map(x=>`<tr><td>${x.t}</td><td class="r num">${PF.format(x.v)}%</td><td class="r num">${total>0?money(total*x.v/100):"—"}</td><td class="small">${x.t==="基础"?"维持已证明有效的基本盘":x.t==="增长"?"放大有初步证据的做法":"检验不确定的假设，可快速止损"}</td></tr>`).join("")}
+      </tbody></table></div>
+      <p class="small muted" style="margin-top:8px">口径：金额 = 总预算 × 比例，四舍五入到元。页面不会计算“最优比例”；常见的 70/20/10 只是行业惯例。${S.meta.isExample?"当前数字为示例。":""}</p>`;
+  },
+  metricBoard(){
+    const ms=S.metrics;
+    if (!ms.length) return `<p class="muted small">添加指标后按四类展示。</p>`;
+    return ["品牌","行为","商业","增量"].map(t=>{ const g=ms.filter(m=>m.type===t);
+      return `<div style="margin-bottom:14px"><h3>${t}指标 <span class="muted small">${g.length} 个</span></h3>${g.length?`<div class="tablewrap"><table><thead><tr><th>指标</th><th>基准</th><th>目标</th><th>窗口</th><th>来源</th></tr></thead><tbody>${g.map(m=>`<tr><td>${esc(m.name)||"未命名"}</td><td class="num">${esc(m.baseline)||'<span class="lv info">缺</span>'}</td><td class="num">${esc(m.target)||"—"}</td><td>${esc(m.window)||'<span class="lv info">缺</span>'}</td><td>${esc(m.source)||'<span class="lv info">缺</span>'}</td></tr>`).join("")}</tbody></table></div>`:`<p class="small muted">无</p>`}</div>`; }).join("") +
+      `<p class="small muted">提醒：相关性不等于因果；末次点击归因不等于完整的营销贡献。增量指标需要对照组。</p>`;
+  },
+  goalFit(){
+    const gt=S.brief.goalType; if(!has(gt)) return `<p class="muted small">在“项目定义”选择目标类型后，这里会检查指标是否匹配。</p>`;
+    const need=GOAL_METRIC[gt]; const got=need.map(t=>[t,S.metrics.some(m=>m.type===t)]);
+    return `<p style="margin:0 0 6px">目标类型：<b>${esc(gt)}</b>，至少需要：</p><ul class="plain">${got.map(([t,ok])=>`<li>${t}指标 <span class="lv ${ok?"ok":"risk"}">${ok?"已有":"缺失"}</span></li>`).join("")}</ul>`;
+  },
+  overviewIssues(){
+    const C=runChecks(); const top=topIssues(C);
+    const cnt = k=>C.filter(c=>c.lvl===k).length;
+    return `<div class="counts">${["ok","info","hyp","risk"].map(k=>`<div><b style="color:var(--${k})">${cnt(k)}</b><span>${LV[k]}</span></div>`).join("")}</div>
+    <h3>最影响决策的问题</h3>${top.length?`<ol class="top-issues">${top.map(c=>`<li><div><span class="lv ${c.lvl}">${LV[c.lvl]}</span> ${esc(c.msg)}<br><a class="go" href="#${c.mod}">前往「${M[c.mod].t}」</a></div></li>`).join("")}</ol>`:`<p class="small muted">没有高权重问题。</p>`}`;
+  },
+  overviewGaps(){
+    const C=runChecks().filter(c=>c.lvl==="info").sort((a,b)=>b.w-a.w).slice(0,6);
+    return C.length ? `<ul class="plain">${C.map(c=>`<li>${esc(c.msg)} <a class="small" href="#${c.mod}">${M[c.mod].t}</a></li>`).join("")}</ul>` : `<p class="small muted">暂无。</p>`;
+  },
+  overviewFacts(){ return listOrEmpty(lines(S.brief.facts),"在“项目定义”中记录已知事实。"); },
+  overviewAssum(){
+    const a = lines(S.brief.assumptions).concat(S.insights.filter(x=>x.status!=="已验证" && has(x.statement)).map(x=>"洞察："+x.statement));
+    return listOrEmpty(a,"暂无假设。");
+  },
+  overviewSummary(){
+    const b=S.brief;
+    return `<p class="stmt">${positioningStatement()}</p><dl class="kv" style="margin-top:14px"><dt>核心问题</dt><dd>${val(b.problem,"核心问题")}</dd><dt>目标</dt><dd>${val(b.goal,"目标")}</dd><dt>关键决策</dt><dd>${val(b.decision,"关键决策")}</dd></dl>`;
+  },
+  flow(){
+    return MODS.filter(m=>m.id!=="overview").map(m=>{ const c=completion(m.id);
+      return `<a href="#${m.id}"><span class="n">${m.n}</span><b>${m.t}</b>${m.id==="report"?`<span class="pct">自动汇总</span>`:c===null?`<span class="pct">可选 · 未启用</span>`:`<span class="bar"><i style="width:${Math.round(c*100)}%"></i></span><span class="pct">${Math.round(c*100)}%</span>`}</a>`; }).join("");
+  },
+  report(){ return reportHTML(); }
+};
+
+/* ================= 报告 ================= */
+function reportData(){
+  const b=S.brief, p=S.pos, C=runChecks(), top=topIssues(C);
+  const plainStmt = positioningStatement().replace(/<[^>]+>/g,"");
+  const dec = extDecision();
+  const total = toNum(S.budget.total);
+  const sec = [];
+  sec.push({h:"1. 核心结论", items:[
+    "定位草案："+plainStmt,
+    "当前最重要的决策："+(b.decision||"（待填）"),
+    ...top.map((c,i)=>`决策前需处理的问题 ${i+1}（${LV[c.lvl]}）：${c.msg}`)
+  ]});
+  sec.push({h:"2. 商业问题与目标", items:[
+    `问题定义：在${b.timeframe||"（时间范围待填）"}内，${b.name||"（品牌）"}需要解决“${b.problem||"（核心问题待填）"}”。`,
+    `目标（${b.goalType||"类型未选"}）：${b.goal||"（待填）"}`, `成功指标：${b.metric||"（待填）"}`,
+    `分析范围：${b.market||"（市场待填）"}；${b.audience||"（人群待填）"}`, `约束：${b.constraints||"（待填）"}`
+  ]});
+  sec.push({h:"3. 市场与消费者证据", items:[
+    ...lines(b.facts).map(x=>"事实："+x), ...(has(b.sources)?["来源："+b.sources]:[]),
+    ...(has(S.market.boundary)?["品类边界："+S.market.boundary]:[]),
+    ...lines(S.market.criteria).map(x=>"购买标准："+x),
+    ...S.market.competitors.filter(c=>has(c.name)).map(c=>`竞争对象（${c.kind}）：${c.name} — ${c.positioning||"定位未填"}；弱点：${c.weakness||"未填"}`),
+    ...(has(S.market.rules)?["竞争规则："+S.market.rules]:[])
+  ]});
+  sec.push({h:"4. 关键洞察", items: S.insights.length ? S.insights.map((x,i)=>`洞察 ${i+1}［${x.status}｜证据：${x.evidenceType}${has(x.source)?"，"+x.source:"，无来源"}］${x.statement||"（陈述待填）"}。观察：${x.observation||"—"}；想要：${x.need||"—"}；阻力：${x.barrier||"—"}；对决策的影响：${x.implication||"—"}`) : ["（尚无洞察）"]});
+  sec.push({h:"5. 品牌定位与差异化证据", items:[
+    "定位陈述："+plainStmt, `品牌个性：${p.personality||"—"}；表达边界：${p.boundary||"—"}`,
+    `与能力一致性：${p.capFit||"未评估"}`,
+    "六维自评（1–5）："+POS_DIMS.map(d=>`${d[1]} ${p.scores[d[0]]||"–"}`).join("，"),
+    `品牌资产（CBBE 自评）：`+CBBE.map(d=>`${d[1].split(" · ")[0]} ${S.equity.levels[d[0]].score||"–"}`).join("，"),
+    `可信证据：${S.equity.trust.proof||"（待补）"}`
+  ]});
+  sec.push({h:"6. 传播与渠道分工", items: S.channels.length ? S.channels.map(c=>`${c.name||"未命名"}［${c.stages.join("/")||"未指定阶段"}］任务：${c.task||"—"}；信息：${c.message||"—"}；期望行为：${c.action||"—"}；衡量：${c.metric||"—"}；衔接：${c.handoff||"—"}`) : ["（尚无渠道）"]});
+  const sum = S.channels.reduce((a,c)=>a+(toNum(c.pct)||0),0);
+  sec.push({h:"7. 预算与指标", items:[
+    `总预算：${total>0?money(total):"（待填）"}；已分配 ${PF.format(sum)}%`,
+    ...S.channels.map(c=>`${c.name||"未命名"}：${PF.format(toNum(c.pct)||0)}%${total>0?"（"+money(total*(toNum(c.pct)||0)/100)+"）":""}，${c.tier}投入；理由：${c.rationale||"未填"}；预期：${c.expected||"—"}；周期：${c.cycle||"—"}；止损：${c.stoploss||"未填"}`),
+    ...S.metrics.map(m=>`［${m.type}］${m.name||"未命名"}：基准 ${m.baseline||"缺"} → 目标 ${m.target||"—"}，${m.window||"窗口缺"}，来源 ${m.source||"缺"}；调整触发：${m.trigger||"—"}`)
+  ]});
+  sec.push({h:"8. 风险、假设与验证计划", items:[
+    ...lines(b.assumptions).map(x=>"假设："+x),
+    ...lines(b.questions).map(x=>"待验证问题："+x),
+    ...S.insights.filter(x=>x.status!=="已验证").map(x=>`洞察待验证：${x.statement||"（未命名）"} → 方法：${x.validation||"未填"}`),
+    ...lines(p.risks).map(x=>"定位风险："+x),
+    ...lines(S.market.gaps).map(x=>"证据缺口："+x),
+    ...(S.ext.enabled?[`品牌延伸「${S.ext.name||"未命名"}」：${dec.d}（${dec.why}）止损：${S.ext.stoploss||"未填"}`]:[]),
+    ...C.filter(c=>c.lvl==="risk").map(c=>"逻辑风险："+c.msg)
+  ]});
+  sec.push({h:"9. 下一步行动", items:[
+    ...lines(S.overview.next),
+    ...top.filter(c=>!lines(S.overview.next).length).map(c=>`处理「${M[c.mod].t}」中的问题：${c.msg}`)
+  ]});
+  sec.forEach(s=>{ if(!s.items.length) s.items=["（暂无内容）"]; });
+  return sec;
+}
+function reportMeta(){
+  const d=new Date(); const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  return {title:`${S.brief.name||"未命名项目"} · 品牌策略简报`, line:`生成日期 ${ds} · 项目阶段：${S.meta.stage} · 生成方式：Brand Lab 规则型汇总（未接入 AI）${S.meta.isExample?" · 含示例数据（虚构演示情境）":""}`};
+}
+function reportHTML(){
+  const m=reportMeta();
+  return `<article class="report" id="reportDoc"><p class="label-cap">Strategy Brief</p><p class="rh">${esc(m.title)}</p><p class="small muted">${esc(m.line)}</p>${reportData().map(s=>`<h2>${esc(s.h)}</h2><ul class="plain">${s.items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`).join("")}</article>`;
+}
+function reportMD(){
+  const m=reportMeta();
+  return `# ${m.title}\n\n> ${m.line}\n\n` + reportData().map(s=>`## ${s.h}\n\n${s.items.map(x=>"- "+x).join("\n")}`).join("\n\n") + "\n";
+}
+
+/* ================= 模块视图 ================= */
+function exampleBanner(){
+  if (!S.meta.isExample) return "";
+  return `<div class="banner" role="note"><span class="badge ex">示例数据</span><p>当前是虚构品牌「栖山」的演示情境，数字与研究结论都是示例，不代表真实市场。你可以直接修改体验流程，或从空白项目开始。</p><button class="btn sm" data-act="new">新建空白项目</button></div>`;
+}
+function grid(inner, out){ return `<div class="mod-grid"><div class="col-in">${inner}</div><aside class="col-out" aria-label="输出与检查">${out}</aside></div>`; }
+
+const VIEWS = {
+  overview(){
+    return `<div class="ov-head"><div>${`<p class="eyebrow"><span class="num">00</span><span>Strategy Overview</span></p>`}<h1 tabindex="-1">${esc(S.brief.name)||"未命名项目"}</h1><p class="lead">项目定义 → 市场诊断 → 消费者洞察 → 品牌定位 → 品牌资产 → 整合传播 → 预算 → 效果评估 → 策略报告</p></div>
+      ${fSelect("meta.stage","项目阶段",["问题定义","诊断","洞察","定位","传播规划","执行与复盘"])}</div>
+      <div class="flowline" data-derived="flow" aria-label="流程完成度"></div>
+      <div class="ov-grid">
+        <section class="out"><h2>已确认事实</h2><div data-derived="overviewFacts"></div></section>
+        <section class="out"><h2>关键假设</h2><div data-derived="overviewAssum"></div></section>
+        <section class="out"><h2>待补信息</h2><div data-derived="overviewGaps"></div></section>
+      </div>
+      <div class="ov-grid2">
+        <section class="out"><h2>策略质量检查</h2><p class="sub">规则型检查，分为四类；先处理排在前面的问题。</p><div data-derived="overviewIssues"></div></section>
+        <section class="out"><h2>策略摘要</h2><div data-derived="overviewSummary"></div>
+          <div style="margin-top:20px">${fArea("overview.next","下一步行动（每行一条）",{rows:4,ph:"例如：完成 n≥300 的概念测试"})}</div></section>
+      </div>
+      <section class="out" style="max-width:860px"><h2>项目文件</h2>
+        <p class="small muted" style="margin-top:-4px">项目自动保存在本浏览器的 localStorage（键名 brandlab.v1），换设备或清除浏览器数据后不会保留。需要备份或交给同事时，请导出项目文件。</p>
+        <div class="btns"><button class="btn" data-act="export">导出项目文件（.json）</button><button class="btn" data-act="import">导入项目文件</button><button class="btn" data-act="example">载入示例项目</button><button class="btn" data-act="new">新建空白项目</button><button class="btn danger" data-act="clear">清空本地数据</button></div>
+      </section>`;
+  },
+  brief(){
+    return modHead("brief","把模糊的需求收敛成一个可判断的问题：目标是什么、用什么衡量、哪些是事实、哪些只是假设。") + method("brief") + grid(
+      `<fieldset><legend>基本信息</legend><div class="row2">${fText("brief.name","品牌/产品名称")}${fText("brief.category","品类与业务阶段",{ph:"如：无糖茶饮料 · 上市第 2 年"})}</div><div class="row2">${fText("brief.market","目标市场/地区")}${fText("brief.audience","目标人群")}</div></fieldset>
+      <fieldset><legend>目标与问题</legend><div class="row2">${fSelect("brief.goalType","目标类型",GOAL_TYPES,{empty:"请选择"})}${fText("brief.timeframe","时间范围",{ph:"如：2027 年 1–12 月"})}</div>
+        ${fText("brief.goal","当前商业目标",{ph:"写成可衡量的形式：时间 + 指标 + 从多少到多少",hint:"目标中有数字或时间，页面才能判断是否可衡量。"})}
+        ${fText("brief.metric","成功指标")}
+        ${fArea("brief.problem","需要解决的核心问题",{rows:3,hint:"区分商业问题（为什么不买）与传播问题（为什么不知道）。"})}
+        ${fArea("brief.constraints","时间、预算与资源约束",{rows:2})}</fieldset>
+      <fieldset><legend>事实与假设</legend>
+        ${fArea("brief.facts","已知事实 / 已有数据（每行一条）",{rows:4})}
+        ${fText("brief.sources","信息来源")}
+        ${fArea("brief.assumptions","关键假设（每行一条）",{rows:3})}
+        ${fArea("brief.questions","待验证问题（每行一条）",{rows:2})}
+        ${fArea("brief.decision","目前最重要的决策",{rows:2})}</fieldset>`,
+      outBox("输出 · 问题定义","briefOut") + checkBox("brief"));
+  },
+  market(){
+    const comps = S.market.competitors.map((c,i)=>`<div class="item"><div class="item-head"><span class="tag">对象 ${i+1}</span><button class="btn sm ghost danger" data-act="del" data-list="market.competitors" data-i="${i}">删除</button></div>
+      <div class="row2">${fText(`market.competitors.${i}.name`,"名称")}${fSelect(`market.competitors.${i}.kind`,"类型",["直接竞争","间接替代","不采取行动"])}</div>
+      ${fText(`market.competitors.${i}.positioning`,"定位")}${fText(`market.competitors.${i}.proof`,"定位证据")}
+      <div class="row2">${fText(`market.competitors.${i}.strength`,"优势")}${fText(`market.competitors.${i}.weakness`,"弱点")}</div>
+      <div class="row2">${fNum(`market.competitors.${i}.x`,"横轴位置",{min:0,max:100,suffix:"/ 100"})}${fNum(`market.competitors.${i}.y`,"纵轴位置",{min:0,max:100,suffix:"/ 100"})}</div></div>`).join("");
+    return modHead("market","看清品类边界、消费者用什么标准做选择，以及品牌在竞争者、替代品与“不采取行动”之间能争取的空间。") + method("market") + grid(
+      `<fieldset><legend>品类与购买</legend>${fArea("market.boundary","品类边界与竞争场景",{rows:2})}${fArea("market.trends","变化趋势",{rows:2,hint:"未核实的行业数字请注明“需核实”。"})}${fArea("market.criteria","消费者购买标准（每行一条）",{rows:3})}${fArea("market.journey","决策过程",{rows:2})}</fieldset>
+      <fieldset><legend>感知地图坐标</legend><div class="row2">${fText("market.xLow","横轴左端")}${fText("market.xHigh","横轴右端")}</div><div class="row2">${fText("market.yLow","纵轴下端")}${fText("market.yHigh","纵轴上端")}</div>
+        <div class="row2">${fNum("market.ours.x","我方横轴位置",{min:0,max:100,suffix:"/ 100"})}${fNum("market.ours.y","我方纵轴位置",{min:0,max:100,suffix:"/ 100"})}</div></fieldset>
+      <fieldset><legend>竞争对象</legend>${comps||`<p class="empty">还没有竞争对象。建议至少包含一个直接竞争者、一个替代品和“不采取行动”。</p>`}<div><button class="btn" data-act="add" data-list="market.competitors">添加竞争对象</button></div></fieldset>
+      <fieldset><legend>判断</legend>${fArea("market.rules","竞争规则摘要",{rows:2,hint:"这个品类靠什么赢？"})}${fArea("market.opportunity","机会假设",{rows:2})}${fArea("market.gaps","证据缺口（每行一条）",{rows:2})}</fieldset>`,
+      outBox("感知地图","perceptionMap") + outBox("竞争比较矩阵","compMatrix") + outBox("规则与机会","marketOut") + checkBox("market"));
+  },
+  insight(){
+    const items = S.insights.map((x,i)=>`<div class="item"><div class="item-head"><span class="tag">洞察 ${i+1}</span><button class="btn sm ghost danger" data-act="del" data-list="insights" data-i="${i}">删除</button></div>
+      <div class="layer"><span class="label-cap">① 观察 · 做了什么</span><div class="row2">${fText(`insights.${i}.segment`,"目标人群")}${fText(`insights.${i}.context`,"使用情境")}</div>${fArea(`insights.${i}.observation`,"行为观察",{rows:2,hint:"只写看得到的行为，不写动机。"})}<div class="row2">${fSelect(`insights.${i}.evidenceType`,"证据类型",EVIDENCE)}${fText(`insights.${i}.source`,"信息来源")}</div></div>
+      <div class="layer"><span class="label-cap">② 张力 · 想要与阻力</span><div class="row2">${fText(`insights.${i}.need`,"想获得什么")}${fText(`insights.${i}.barrier`,"担心什么 / 阻力")}</div></div>
+      <div class="layer"><span class="label-cap">③ 洞察假设</span>${fArea(`insights.${i}.statement`,"洞察陈述",{rows:2})}${fText(`insights.${i}.implication`,"对品牌决策的影响")}<div class="row2">${fText(`insights.${i}.validation`,"验证方法")}${fSelect(`insights.${i}.status`,"状态",["待验证","验证中","已验证"])}</div></div></div>`).join("");
+    return modHead("insight","按观察、张力、洞察假设三层记录。没有行为或研究证据的内容只能停留在假设层。") + method("insight") + grid(
+      `${items||`<p class="empty">还没有洞察。</p>`}<div><button class="btn" data-act="add" data-list="insights">添加洞察</button></div>`,
+      outBox("洞察板","insightBoard","每行从左到右：观察 → 张力 → 洞察假设。") + checkBox("insight"));
+  },
+  position(){
+    return modHead("position","在目标人群、关键情境与竞争参照中，选择一个可信、可感知的差异点。") + method("position") + grid(
+      `<fieldset><legend>定位画布</legend><div class="row2">${fText("pos.target","目标人群")}${fText("pos.need","关键情境/需求")}</div><div class="row2">${fText("pos.frame","品牌类别与角色")}${fText("pos.value","价值主张")}</div>
+        ${fText("pos.diff","差异化选择理由")}${fArea("pos.proof","支撑证据/品牌能力",{rows:2})}<div class="row2">${fText("pos.personality","品牌个性")}${fText("pos.boundary","表达边界（不说什么）")}</div>
+        ${fSelect("pos.capFit","定位与产品/组织能力",["一致","部分一致","不一致"],{empty:"请选择"})}${fArea("pos.risks","定位风险与待验证假设（每行一条）",{rows:2})}</fieldset>
+      <fieldset><legend>六维评估（团队自评）</legend><div>${POS_DIMS.map(d=>scoreRow(`pos.scores.${d[0]}`,d[1],d[2])).join("")}</div></fieldset>`,
+      outBox("定位陈述草案","posStatement") + outBox("定位画布","posCanvas") + outBox("六维评估","radar") + checkBox("position"));
+  },
+  equity(){
+    return modHead("equity","用 CBBE 判断品牌资产卡在哪一层，再检查承诺、证据与体验能否支撑信任。框架帮助组织信息，结论仍要靠证据。") + method("equity") + grid(
+      `<fieldset><legend>CBBE 四层</legend>${CBBE.map(d=>`<div class="item">${scoreRow(`equity.levels.${d[0]}.score`,d[1],d[2])}${fText(`equity.levels.${d[0]}.evidence`,"证据")}</div>`).join("")}</fieldset>
+      <fieldset><legend>信任检查</legend>${fText("equity.trust.promise","品牌承诺")}${fText("equity.trust.proof","可信证据（认证、检测、第三方）")}${fText("equity.trust.consistency","体验是否一致")}${fText("equity.trust.wom","口碑、评价与第三方信号")}${fText("equity.trust.risk","消费者感知风险")}</fieldset>`,
+      outBox("品牌资产金字塔","pyramid") + outBox("信任要素","trustOut") + checkBox("equity"));
+  },
+  extension(){
+    return modHead("extension","评估新产品或品牌延伸能否借用现有资产、是否会稀释定位，并写清进入、暂缓或不进入的条件。") + method("extension") + grid(
+      `<fieldset><legend>延伸方案</legend><label class="chk" style="align-self:flex-start"><input type="checkbox" id="f-ext-enabled" data-bind="ext.enabled" ${S.ext.enabled?"checked":""}> 评估一个延伸方案</label>
+        ${fText("ext.name","延伸产品/方向")}${fArea("ext.desc","方案说明",{rows:2})}</fieldset>
+      <fieldset><legend>六维评估（1–5）</legend><div>${EXT_DIMS.map(d=>scoreRow(`ext.scores.${d[0]}`,d[1],d[2])).join("")}</div></fieldset>
+      <fieldset><legend>条件</legend>${fArea("ext.conditions","进入 / 暂缓的条件",{rows:2})}${fArea("ext.stoploss","止损条件",{rows:2})}</fieldset>`,
+      outBox("延伸评估","extOut") + checkBox("extension"));
+  },
+  imc(){
+    const items = S.channels.map((c,i)=>`<div class="item"><div class="item-head"><span class="tag">渠道 ${i+1}</span><button class="btn sm ghost danger" data-act="del" data-list="channels" data-i="${i}">删除</button></div>
+      ${fText(`channels.${i}.name`,"渠道 / 触点名称")}
+      <div class="field"><span class="flabel" id="stg-${i}">旅程阶段</span><div class="checks-inline" role="group" aria-labelledby="stg-${i}">${STAGES.map(s=>`<label class="chk"><input type="checkbox" data-bind="channels.${i}.stages" data-arr="${s}" ${c.stages.includes(s)?"checked":""}>${s}</label>`).join("")}</div></div>
+      ${fText(`channels.${i}.task`,"主要任务")}<div class="row2">${fText(`channels.${i}.audience`,"目标人群")}${fText(`channels.${i}.message`,"核心信息")}</div>
+      <div class="row2">${fText(`channels.${i}.format`,"内容/触点形式")}${fText(`channels.${i}.action`,"期望行为")}</div>
+      <div class="row2">${fText(`channels.${i}.metric`,"衡量指标")}${fText(`channels.${i}.handoff`,"与其他渠道的衔接")}</div></div>`).join("");
+    return modHead("imc","以消费者旅程为主线，为每个渠道分配任务。渠道按任务分工，不按流量大小排座次。") + method("imc") + grid(
+      `${items||`<p class="empty">还没有渠道。</p>`}<div><button class="btn" data-act="add" data-list="channels">添加渠道</button></div>`,
+      outBox("旅程覆盖矩阵","journey","认知 → 理解 → 信任 → 行动 → 留存/推荐；“断点”表示没有渠道承担该阶段。") + outBox("渠道分工","channelRoles") + checkBox("imc"));
+  },
+  budget(){
+    const rows = S.channels.map((c,i)=>`<div class="item"><div class="bud-row"><div class="name">${esc(c.name)||"未命名渠道"}<div class="small muted" style="font-weight:400">${c.stages.map(esc).join(" / ")||"未指定阶段"}</div></div>
+      ${fNum(`channels.${i}.pct`,"比例",{min:0,max:100,suffix:"%"})}
+      <div class="field"><label for="amt-${i}">金额</label><div class="suffix"><input type="text" inputmode="decimal" id="amt-${i}" data-amt="${i}" value="${amtVal(i)}" aria-describedby="e-amt-${i}" autocomplete="off"><span>元</span></div><p class="err" id="e-amt-${i}" hidden></p></div>
+      ${fSelect(`channels.${i}.tier`,"投入类型",["基础","增长","实验"])}</div>
+      ${fText(`channels.${i}.rationale`,"分配理由")}<div class="row3">${fText(`channels.${i}.expected`,"预期结果")}${fText(`channels.${i}.cycle`,"验证周期")}${fText(`channels.${i}.stoploss`,"减投/止损条件")}</div></div>`).join("");
+    return modHead("budget","输入总预算与各渠道比例或金额，页面实时计算合计并提示超额或未分配。比例是基于目标与不确定性的初始假设，不是计算出的最优解。") + method("budget") + grid(
+      `<fieldset><legend>总预算</legend>${fNum("budget.total","总预算",{min:0,max:1e12,suffix:"元",ph:"例如 3000000"})}</fieldset>
+      <fieldset><legend>渠道分配</legend>${rows||`<p class="empty">先在“整合传播”中添加渠道，再回来分配预算。<a href="#imc">前往整合传播</a></p>`}</fieldset>`,
+      outBox("分配结果","allocation") + checkBox("budget"));
+  },
+  measure(){
+    const items = S.metrics.map((m,i)=>`<div class="item"><div class="item-head"><span class="tag">指标 ${i+1}</span><button class="btn sm ghost danger" data-act="del" data-list="metrics" data-i="${i}">删除</button></div>
+      <div class="row2">${fSelect(`metrics.${i}.type`,"类型",["品牌","行为","商业","增量"])}${fText(`metrics.${i}.name`,"指标名称")}</div>
+      ${fText(`metrics.${i}.def`,"定义与计算口径")}<div class="row3">${fText(`metrics.${i}.source`,"数据来源")}${fText(`metrics.${i}.baseline`,"基准值")}${fText(`metrics.${i}.target`,"目标值")}</div>
+      <div class="row3">${fText(`metrics.${i}.window`,"时间窗口")}${fText(`metrics.${i}.bias`,"可能的偏差")}${fText(`metrics.${i}.trigger`,"何时触发调整")}</div></div>`).join("");
+    return modHead("measure","把品牌、行为、商业与增量指标放在一起，每个指标都写清口径、来源、基准与调整触发条件。") + method("measure") + grid(
+      `${items||`<p class="empty">还没有指标。</p>`}<div><button class="btn" data-act="add" data-list="metrics">添加指标</button></div>`,
+      outBox("目标与指标匹配","goalFit") + outBox("指标面板","metricBoard") + checkBox("measure"));
+  },
+  report(){
+    return modHead("report","从前面各模块自动汇总。修改任何模块后，这里会实时更新。汇总由模板拼接，不是 AI 撰写。") +
+      `<div class="report-tools"><button class="btn primary" data-act="copymd">复制报告（Markdown）</button><button class="btn" data-act="copytxt">复制纯文本</button><button class="btn" data-act="dlmd">下载 .md 文件</button><span class="small muted" id="copyHint"></span></div>
+      <div data-derived="report"></div>`;
+  }
+};
+function amtVal(i){ const t=toNum(S.budget.total), p=toNum(S.channels[i]?.pct); return (t>0 && Number.isFinite(p)) ? String(Math.round(t*p/100)) : ""; }
+
+/* ================= 渲染 ================= */
+function renderChrome(){
+  $("#nav").innerHTML = MODS.map(m=>{ const c=completion(m.id);
+    const dot = m.id==="overview"||m.id==="report" ? "<span></span>" : c===null ? `<span class="dot opt" title="可选"></span>` : `<span class="dot" title="完成度 ${Math.round(c*100)}%"><i style="width:${Math.round(c*100)}%"></i></span>`;
+    return `<li><a href="#${m.id}" ${m.id===cur?'aria-current="page"':""}><span class="n">${m.n}</span><span>${m.t}</span>${dot}</a></li>`; }).join("");
+  $("#topProj").innerHTML = `项目：<strong>${esc(S.brief.name)||"未命名项目"}</strong> · ${esc(S.meta.stage)}`;
+  $("#topBadges").innerHTML = `${S.meta.isExample?'<span class="badge ex">示例数据</span>':""}<span class="badge rule">规则型原型 · 未接入 AI</span><span class="badge">仅本地保存</span>`;
+}
+function refreshDerived(){
+  document.querySelectorAll("[data-derived]").forEach(el=>{
+    const [k,arg] = el.dataset.derived.split(":");
+    if (DERIVED[k]) el.innerHTML = DERIVED[k](arg);
+  });
+}
+function renderMain(focus){
+  $("#view").innerHTML = exampleBanner() + VIEWS[cur]();
+  refreshDerived(); renderChrome();
+  const curLink = $("#nav a[aria-current]"); if (curLink && window.innerWidth<=900) curLink.scrollIntoView({block:"nearest",inline:"center"});
+  if (focus){ window.scrollTo(0,0); const h=$("#view h1"); if(h) h.focus({preventScroll:true}); }
+}
+let rTimer=null;
+function refresh(){ clearTimeout(rTimer); rTimer=setTimeout(()=>{ refreshDerived(); renderChrome(); },60); }
+function route(){
+  const h = location.hash.replace("#","");
+  const next = M[h] ? h : "overview";
+  const changed = next!==cur; cur = next;
+  renderMain(changed);
+  document.title = (cur==="overview"?"":M[cur].t+" · ") + "Brand Lab 策略工作台";
+}
+
+/* ================= 输入处理 ================= */
+function showErr(el, msg){
+  const e = document.getElementById(el.getAttribute("aria-describedby")||"");
+  el.setAttribute("aria-invalid", msg?"true":"false");
+  if (e){ e.textContent = msg||""; e.hidden = !msg; }
+}
+function syncBudget(except){
+  const t = toNum(S.budget.total);
+  S.channels.forEach((c,i)=>{
+    const a = document.getElementById("amt-"+i), p = document.getElementById(fid(`channels.${i}.pct`));
+    if (a && a!==except){ a.value = amtVal(i); showErr(a,""); }
+    if (p && p!==except && document.activeElement!==p){ p.value = c.pct; }
+  });
+}
+function onInput(e){
+  const el = e.target;
+  if (el.dataset.amt!=null && !el.dataset.bind){ // 金额 → 比例
+    const i = +el.dataset.amt, t = toNum(S.budget.total), raw = el.value.trim();
+    if (raw===""){ S.channels[i].pct=""; showErr(el,""); }
+    else if (!(t>0)){ showErr(el,"请先填写总预算，才能把金额换算为比例。"); return; }
+    else { const n=toNum(raw); if (!Number.isFinite(n)||n<0){ showErr(el,"请输入不小于 0 的数字。"); return; }
+      let pct = n/t*100; if (pct>100){ showErr(el,"金额超过总预算，已按 100% 计算。"); pct=100; } else showErr(el,"");
+      S.channels[i].pct = String(Math.round(pct*100)/100); }
+    syncBudget(el); save(); refresh(); return;
+  }
+  const path = el.dataset.bind; if (!path) return;
+  if (el.type==="checkbox"){
+    if (el.dataset.arr){ const arr=getP(path); const v=el.dataset.arr; const idx=arr.indexOf(v); if (el.checked && idx<0) arr.push(v); if(!el.checked && idx>=0) arr.splice(idx,1); arr.sort((a,b)=>STAGES.indexOf(a)-STAGES.indexOf(b)); }
+    else { setP(path, el.checked); }
+  } else if (el.dataset.num){
+    const raw = el.value.trim();
+    if (raw===""){ setP(path,""); showErr(el,""); }
+    else { let n = toNum(raw);
+      if (!Number.isFinite(n)){ showErr(el,"请输入数字（可以带千分位逗号）。"); return; }
+      const mn = el.dataset.min!=null?+el.dataset.min:-Infinity, mx = el.dataset.max!=null?+el.dataset.max:Infinity;
+      if (n<mn){ showErr(el,`不能小于 ${mn}，已按 ${mn} 计算。`); n=mn; }
+      else if (n>mx){ showErr(el,`不能大于 ${NF.format(mx)}，已按 ${NF.format(mx)} 计算。`); n=mx; }
+      else showErr(el,"");
+      setP(path, String(n)); }
+    if (path.startsWith("budget.") || /^channels\.\d+\.pct$/.test(path)) syncBudget(el);
+  } else {
+    setP(path, el.value);
+  }
+  if (S.meta.isExample && path && !path.startsWith("meta.")) { /* 保持示例标记，提示仍为示例情境 */ }
+  if (path==="ext.enabled" || /\.name$/.test(path) && cur==="budget") { save(); renderMain(false); return; }
+  save(); refresh();
+}
+document.addEventListener("input", onInput);
+document.addEventListener("change", e=>{ if (e.target.tagName==="SELECT" || e.target.type==="checkbox") onInput(e); });
+
+/* ================= 点击动作 ================= */
+document.addEventListener("click", e=>{
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const act = b.dataset.act;
+  if (act==="score"){
+    const path=b.dataset.path, v=+b.dataset.v; const now=getP(path);
+    setP(path, now===v?0:v);
+    b.parentElement.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", String(+x.dataset.v===getP(path))));
+    save(); refresh(); return;
+  }
+  if (act==="add"){
+    const path=b.dataset.list; const arr=getP(path);
+    const tpl = path==="market.competitors"?T.competitor():path==="insights"?T.insight():path==="channels"?T.channel():T.metric();
+    arr.push(tpl); save(); renderMain(false);
+    const items = document.querySelectorAll(".col-in .item"); const last = items[items.length-1];
+    if (last){ last.scrollIntoView({block:"center",behavior:"smooth"}); const f=last.querySelector("input,textarea,select"); if (f) f.focus({preventScroll:true}); }
+    return;
+  }
+  if (act==="del"){
+    const path=b.dataset.list, i=+b.dataset.i, arr=getP(path);
+    const [item] = arr.splice(i,1); lastDeleted={path,i,item};
+    save(); renderMain(false);
+    toast(`已删除“${cut(item.name||item.statement||"条目",14)}”`, false, {label:"撤销", fn:()=>{ if(!lastDeleted) return; getP(lastDeleted.path).splice(lastDeleted.i,0,lastDeleted.item); lastDeleted=null; save(); renderMain(false); toast("已恢复"); }});
+    return;
+  }
+  if (act==="example") return askConfirm("载入示例项目会替换当前所有内容。建议先导出项目文件备份。", "载入示例", ()=>{ S=example(); save(); renderMain(true); toast("已载入示例项目（虚构数据）"); });
+  if (act==="new") return askConfirm("新建空白项目会清除当前所有内容。建议先导出项目文件备份。", "新建空白项目", ()=>{ S=blank(); save(); location.hash="#brief"; renderMain(true); toast("已新建空白项目"); });
+  if (act==="clear") return askConfirm("清空本地数据会删除本浏览器中保存的项目，并恢复为示例项目。此操作无法撤销。", "清空", ()=>{ try{ localStorage.removeItem(STORE_KEY); }catch(_){} S=example(); renderMain(true); toast("已清空本地数据，当前显示示例项目（未保存）"); });
+  if (act==="export"){ download(`brandlab-${(S.brief.name||"project").replace(/[\\/:*?"<>|\s（）()]+/g,"-")}.json`, JSON.stringify(S,null,2), "application/json"); return; }
+  if (act==="import"){ $("#importFile").click(); return; }
+  if (act==="copymd") return copyText(reportMD(), "已复制 Markdown 报告");
+  if (act==="copytxt") return copyText(reportMD().replace(/^#+\s*/gm,"").replace(/^>\s*/gm,"").replace(/^- /gm,"· "), "已复制纯文本报告");
+  if (act==="dlmd") return download(`${(S.brief.name||"strategy").replace(/[\\/:*?"<>|\s（）()]+/g,"-")}-策略简报.md`, reportMD(), "text/markdown");
+});
+$("#importFile").addEventListener("change", e=>{
+  const f = e.target.files[0]; if (!f) return;
+  if (f.size > 2e6){ toast("文件超过 2MB，不像是 Brand Lab 项目文件。", true); e.target.value=""; return; }
+  const r = new FileReader();
+  r.onload = ()=>{ try{ const d=JSON.parse(r.result); if(!d||typeof d!=="object"||!d.brief) throw new Error("x"); S=merge(blank(),d); save(); renderMain(true); toast("已导入项目文件"); }catch(_){ toast("导入失败：文件不是有效的 Brand Lab 项目文件（.json）。", true); } e.target.value=""; };
+  r.onerror = ()=>{ toast("读取文件失败。", true); e.target.value=""; };
+  r.readAsText(f);
+});
+
+function download(name, text, type){
+  try{
+    const url = URL.createObjectURL(new Blob([text],{type:type+";charset=utf-8"}));
+    const a = document.createElement("a"); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 2000);
+    toast(`已生成 ${name}。如果浏览器没有开始下载，请改用“复制”。`);
+  }catch(_){ toast("下载失败：当前环境不允许下载文件，请改用“复制”。", true); }
+}
+function copyText(text, ok){
+  const fallback = ()=>{
+    const ta=document.createElement("textarea"); ta.value=text; ta.setAttribute("readonly",""); ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select();
+    let done=false; try{ done=document.execCommand("copy"); }catch(_){}
+    ta.remove();
+    if (done) toast(ok); else { toast("复制失败：浏览器拒绝访问剪贴板。已选中报告正文，可按 Ctrl/⌘+C 手动复制。", true); selectReport(); }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(()=>toast(ok), fallback);
+  else fallback();
+}
+function selectReport(){ const d=$("#reportDoc"); if(!d) return; const r=document.createRange(); r.selectNodeContents(d); const s=getSelection(); s.removeAllRanges(); s.addRange(r); }
+
+/* ================= Toast & 确认框 ================= */
+function toast(msg, bad=false, action){
+  const t=document.createElement("div"); t.className="toast"+(bad?" bad":""); t.setAttribute("role", bad?"alert":"status");
+  t.innerHTML=`<span>${esc(msg)}</span>`;
+  if (action){ const btn=document.createElement("button"); btn.textContent=action.label; btn.onclick=()=>{ action.fn(); t.remove(); }; t.appendChild(btn); }
+  $("#toasts").appendChild(t); setTimeout(()=>t.remove(), action?7000:4200);
+}
+function askConfirm(msg, yes, fn){
+  const prev = document.activeElement;
+  const root=$("#modalRoot");
+  root.innerHTML=`<div class="modal-back"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mdT"><h2 id="mdT">请确认</h2><p>${esc(msg)}</p><div class="btns"><button class="btn danger" id="mdYes">${esc(yes)}</button><button class="btn" id="mdNo">取消</button></div></div></div>`;
+  const close=()=>{ root.innerHTML=""; document.removeEventListener("keydown",key); if(prev&&prev.focus) prev.focus(); };
+  const key=e=>{ if(e.key==="Escape") close(); if(e.key==="Tab"){ const y=$("#mdYes"),n=$("#mdNo"); if(e.shiftKey&&document.activeElement===y){e.preventDefault();n.focus();} else if(!e.shiftKey&&document.activeElement===n){e.preventDefault();y.focus();} } };
+  document.addEventListener("keydown",key);
+  $("#mdNo").onclick=close; $("#mdYes").onclick=()=>{ close(); fn(); };
+  root.querySelector(".modal-back").addEventListener("click",e=>{ if(e.target.classList.contains("modal-back")) close(); });
+  $("#mdNo").focus();
+}
+
+/* ================= 启动 ================= */
+load();
+window.addEventListener("hashchange", route);
+cur = "__init";
+route();
+</script>
+</body>
+</html>
