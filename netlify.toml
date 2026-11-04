@@ -1,0 +1,6 @@
+# Netlify 只部署 Brand Lab 工作台（brand-lab/ 目录），不部署根目录的校招站。
+# GitHub Pages 不读取此文件，不受影响。
+[build]
+  base = "brand-lab"
+  publish = "."
+  functions = "netlify/functions"
