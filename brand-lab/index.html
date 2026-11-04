@@ -34,6 +34,7 @@
   --ok-bg:#1E2D23; --info-bg:#30281A; --hyp-bg:#20263A; --risk-bg:#3A221D; color-scheme:dark }
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.6}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
@@ -246,6 +247,14 @@ svg.chart{width:100%;height:auto;display:block;max-width:100%}
 .report .rh{font-family:var(--f-display);font-size:clamp(24px,3vw,30px);margin:0 0 6px}
 .report p{margin:0 0 8px}
 .report-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+
+/* read-only share mode */
+.ro input:disabled,.ro textarea:disabled,.ro select:disabled{opacity:1;color:var(--fg);-webkit-text-fill-color:var(--fg);background:var(--bg);cursor:default}
+.ro .seg button:disabled{cursor:default}
+.ro .seg button:disabled:not([aria-pressed=true]){color:var(--muted)}
+.share-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.share-list li{border:1px solid var(--line);background:var(--surface);padding:10px 12px;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.share-list input{font-family:var(--f-mono);font-size:12.5px}
 
 /* AI panel */
 .ai{display:flex;flex-direction:column;gap:10px;font-size:13.5px}
@@ -469,6 +478,8 @@ function example(){
 
 /* ================= 状态与存储 ================= */
 let S, cur = "overview", lastDeleted = null, storageOk = true;
+const SHARE_ID = (()=>{ try{ const v=new URLSearchParams(location.search).get("share"); return /^[A-Za-z0-9]{16}$/.test(v||"") ? v : null; }catch(_){ return null; } })();
+let RO = SHARE_ID ? {status:"loading"} : null; // 只读分享模式
 function merge(base, saved){
   if (Array.isArray(base)) return Array.isArray(saved) ? saved : base;
   if (base && typeof base === "object"){
@@ -479,6 +490,7 @@ function merge(base, saved){
   return (saved === undefined || saved === null || typeof saved === "object") ? base : saved;
 }
 function load(){
+  if (RO){ S = blank(); return; } // 只读模式不读写本地项目
   try{
     const raw = localStorage.getItem(STORE_KEY);
     if (raw){ S = merge(blank(), JSON.parse(raw)); return; }
@@ -487,6 +499,7 @@ function load(){
 }
 let saveTimer = null;
 function save(){
+  if (RO) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(()=>{
     try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); storageOk = true; }
@@ -956,7 +969,15 @@ function reportMD(){
 }
 
 /* ================= 模块视图 ================= */
+function shareBanner(){
+  const own = `<a class="btn sm" href="${esc(location.pathname)}">打开我自己的工作台</a>`;
+  if (RO.status==="loading") return `<div class="banner" role="status"><span class="badge ex">只读分享</span><p>正在载入分享的项目…</p></div>`;
+  if (RO.status==="error") return `<div class="banner" role="alert"><span class="badge ex">只读分享</span><p>${esc(RO.error)}</p>${own}</div>`;
+  const d = new Date(RO.createdAt); const ds = isNaN(d) ? "" : d.toLocaleString("zh-CN",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+  return `<div class="banner" role="note"><span class="badge ex">只读分享</span><p>这是「${esc(RO.title)}」${ds?"在 "+ds+" ":""}分享的快照，只能查看${S.meta.isExample?"（内容为虚构示例数据）":""}。你在这里的操作不会被保存，也不会影响你自己的项目。</p><div class="btns"><button class="btn sm" data-act="ro-import">复制到我的工作台</button>${own}</div></div>`;
+}
 function exampleBanner(){
+  if (RO) return shareBanner();
   if (!S.meta.isExample) return "";
   return `<div class="banner" role="note"><span class="badge ex">示例数据</span><p>当前是虚构品牌「栖山」的演示情境，数字与研究结论都是示例，不代表真实市场。你可以直接修改体验流程，或从空白项目开始。</p><button class="btn sm" data-act="new">新建空白项目</button></div>`;
 }
@@ -977,10 +998,11 @@ const VIEWS = {
         <section class="out"><h2>策略摘要</h2><div data-derived="overviewSummary"></div>
           <div style="margin-top:20px">${fArea("overview.next","下一步行动（每行一条）",{rows:4,ph:"例如：完成 n≥300 的概念测试"})}</div></section>
       </div>
+      ${RO ? `<section class="out" style="max-width:860px"><h2>这份分享</h2><p class="small muted" style="margin-top:-4px">只读快照。可以在“策略报告”复制报告，或复制到自己的工作台继续编辑。</p><div class="btns"><button class="btn" data-act="ro-import">复制到我的工作台</button><button class="btn" data-act="export">导出项目文件（.json）</button></div></section>` : `<section class="out" style="max-width:860px;margin-bottom:36px"><h2>只读分享链接</h2><div data-derived="shareBox"></div></section>
       <section class="out" style="max-width:860px"><h2>项目文件</h2>
         <p class="small muted" style="margin-top:-4px">项目自动保存在本浏览器的 localStorage（键名 brandlab.v1），换设备或清除浏览器数据后不会保留。需要备份或交给同事时，请导出项目文件。</p>
         <div class="btns"><button class="btn" data-act="export">导出项目文件（.json）</button><button class="btn" data-act="import">导入项目文件</button><button class="btn" data-act="example">载入示例项目</button><button class="btn" data-act="new">新建空白项目</button><button class="btn danger" data-act="clear">清空本地数据</button></div>
-      </section>`;
+      </section>`}`;
   },
   brief(){
     return modHead("brief","把模糊的需求收敛成一个可判断的问题：目标是什么、用什么衡量、哪些是事实、哪些只是假设。") + method("brief") + grid(
@@ -1118,6 +1140,7 @@ function mdLite(t){
   close(); return h;
 }
 function aiHTML(task){
+  if (RO) return `<p class="note muted small">只读分享中不提供 AI 评审。</p>`;
   if (AIS.status==="checking") return `<p class="note muted small">正在检查本站是否提供 AI 服务…</p>`;
   if (AIS.status==="off") return `<div class="ai"><p class="note">AI 评审需要部署在带服务端函数的 Netlify 站点上。当前打开方式（本地文件、GitHub Pages 或预览）没有可用的 AI 服务，所以不提供评审按钮；上方的规则型检查照常可用。</p></div>`;
   if (AIS.status==="nokey") return `<div class="ai"><p class="note">站点已部署，但管理员还没有在 Netlify 中配置 ANTHROPIC_API_KEY，暂时无法评审。</p></div>`;
@@ -1152,13 +1175,71 @@ async function runAI(task){
 document.addEventListener("input", e=>{ if (e.target.dataset && e.target.dataset.aicode){ aiCode=e.target.value; try{ sessionStorage.setItem("brandlab.aicode",aiCode); }catch(_){} } });
 function aiBox(task){ return `<section class="out"><h2>AI 评审 <span class="lv ai" style="vertical-align:3px">可选</span></h2><div data-derived="ai:${task}"></div></section>`; }
 
+/* ================= 只读分享 ================= */
+const SHARE_URL = "/api/share", MYSHARES_KEY = "brandlab.shares";
+let SH = {status:"checking",needsCode:false}, shareBusy = false, shareErr = "";
+function myShares(){ try{ const a=JSON.parse(localStorage.getItem(MYSHARES_KEY)||"[]"); return Array.isArray(a)?a:[]; }catch(_){ return []; } }
+function setMyShares(a){ try{ localStorage.setItem(MYSHARES_KEY, JSON.stringify(a)); return true; }catch(_){ return false; } }
+const shareLink = id => `${location.origin}${location.pathname}?share=${id}`;
+async function checkShare(){
+  if (RO) return;
+  if (location.protocol==="file:"){ SH.status="off"; refreshDerived(); return; }
+  const ctl=new AbortController(); const tm=setTimeout(()=>ctl.abort(),6000);
+  try{ const r=await fetch(SHARE_URL,{cache:"no-store",signal:ctl.signal}); const d=r.ok?await r.json():null; SH = d&&d.available ? {status:"ok",needsCode:!!d.needsCode} : {status:"off"}; }
+  catch(_){ SH={status:"off"}; }
+  finally{ clearTimeout(tm); refreshDerived(); }
+}
+async function loadShare(){
+  try{
+    const r = await fetch(`${SHARE_URL}?id=${SHARE_ID}`,{cache:"no-store"});
+    let d={}; try{ d=await r.json(); }catch(_){}
+    if (!r.ok || !d.data) throw new Error(d.error || (r.status===404?"这个分享链接不存在，或已被分享者撤销。":"分享内容载入失败，请检查网址是否完整。"));
+    S = merge(blank(), d.data); RO = {status:"ok", title:d.title||S.brief.name||"未命名项目", createdAt:d.createdAt};
+  }catch(e){ RO = {status:"error", error: e.message || "分享内容载入失败。"}; }
+  renderMain(false);
+}
+DERIVED.shareBox = function(){
+  if (SH.status==="checking") return `<p class="small muted">正在检查分享服务…</p>`;
+  if (SH.status==="off") return `<p class="small muted">只读分享需要部署在 Netlify 上（使用本站服务端存储）。当前打开方式（本地文件、GitHub Pages 或预览）不可用。可以改用“导出项目文件”发给对方。</p>`;
+  const list = myShares();
+  return `<p class="small muted" style="margin:-4px 0 10px">把当前项目保存为一份快照，生成一个链接。拿到链接的任何人都能查看，但不能修改；你之后的修改不会同步到这份快照，需要时重新生成即可。快照保存在本站的 Netlify 存储中。${S.meta.isExample?"<br>注意：当前是示例项目。":""}</p>
+    ${SH.needsCode?`<div class="field" style="max-width:320px;margin-bottom:10px"><label for="aiCode-share">访问码</label><input type="text" id="aiCode-share" data-aicode="1" value="${esc(aiCode)}" autocomplete="off" placeholder="与 AI 评审相同的访问码"></div>`:""}
+    <div class="btns"><button class="btn primary" data-act="share-create" ${shareBusy?"disabled":""}>${shareBusy?'<span class="spin" aria-hidden="true"></span> 正在生成…':"生成只读分享链接"}</button></div>
+    ${shareErr?`<p class="err" role="alert" style="margin-top:8px">${esc(shareErr)}</p>`:""}
+    ${list.length?`<h3 style="margin-top:16px">我生成的链接 <span class="small muted">（记录保存在本浏览器）</span></h3><ul class="share-list">${list.map((x,i)=>{ const d=new Date(x.at); return `<li><div><b>${esc(x.title)}</b> <span class="small muted">${isNaN(d)?"":d.toLocaleString("zh-CN",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}</span></div><input type="text" readonly value="${esc(shareLink(x.id))}" aria-label="分享链接" onfocus="this.select()"><div class="btns"><button class="btn sm" data-act="share-copy" data-i="${i}">复制链接</button><a class="btn sm" href="${esc(shareLink(x.id))}" target="_blank" rel="noopener">打开预览</a><button class="btn sm danger" data-act="share-revoke" data-i="${i}">撤销链接</button></div></li>`; }).join("")}</ul>`:""}`;
+};
+async function createShare(){
+  if (shareBusy) return;
+  if (SH.needsCode && !aiCode.trim()){ shareErr="请先填写访问码。"; refreshDerived(); return; }
+  shareBusy=true; shareErr=""; refreshDerived();
+  try{
+    const headers={"content-type":"application/json"}; if (aiCode.trim()) headers["x-access-code"]=aiCode.trim();
+    const r = await fetch(SHARE_URL,{method:"POST",headers,body:JSON.stringify({data:S})});
+    let d={}; try{ d=await r.json(); }catch(_){}
+    if (!r.ok || !d.id) throw new Error(d.error || `生成失败（HTTP ${r.status}）。`);
+    const list=myShares(); list.unshift({id:d.id,token:d.token,title:d.title,at:d.createdAt});
+    if (!setMyShares(list)) toast("链接已生成，但浏览器不允许保存记录；请立刻复制链接，之后将无法在这里撤销。", true);
+    copyText(shareLink(d.id), "分享链接已生成并复制");
+  }catch(e){ shareErr = e.message || "网络错误。"; }
+  finally{ shareBusy=false; refreshDerived(); }
+}
+async function revokeShare(i){
+  const x = myShares()[i]; if (!x) return;
+  try{
+    const r = await fetch(`${SHARE_URL}?id=${x.id}`,{method:"DELETE",headers:{"x-share-token":x.token}});
+    let d={}; try{ d=await r.json(); }catch(_){}
+    if (!r.ok) throw new Error(d.error || `撤销失败（HTTP ${r.status}）。`);
+    setMyShares(myShares().filter(y=>y.id!==x.id)); refreshDerived(); toast("链接已撤销，对方将无法再打开");
+  }catch(e){ toast(e.message||"撤销失败。", true); }
+}
+
 /* ================= 渲染 ================= */
 function renderChrome(){
   $("#nav").innerHTML = MODS.map(m=>{ const c=completion(m.id);
     const dot = m.id==="overview"||m.id==="report" ? "<span></span>" : c===null ? `<span class="dot opt" title="可选"></span>` : `<span class="dot" title="完成度 ${Math.round(c*100)}%"><i style="width:${Math.round(c*100)}%"></i></span>`;
     return `<li><a href="#${m.id}" ${m.id===cur?'aria-current="page"':""}><span class="n">${m.n}</span><span>${m.t}</span>${dot}</a></li>`; }).join("");
   $("#topProj").innerHTML = `项目：<strong>${esc(S.brief.name)||"未命名项目"}</strong> · ${esc(S.meta.stage)}`;
-  $("#topBadges").innerHTML = `${S.meta.isExample?'<span class="badge ex">示例数据</span>':""}<span class="badge rule">${AIS.status==="ok"?"规则检查 + 可选 AI 评审":"规则型原型 · 未接入 AI"}</span><span class="badge">仅本地保存</span>`;
+  $("#topBadges").innerHTML = `${S.meta.isExample?'<span class="badge ex">示例数据</span>':""}<span class="badge rule">${AIS.status==="ok"?"规则检查 + 可选 AI 评审":"规则型原型 · 未接入 AI"}</span>${RO?'<span class="badge ex">只读分享</span>':'<span class="badge">仅本地保存</span>'}`;
   $("#footNote").innerHTML = (AIS.status==="ok"
     ? "质量检查与报告汇总由页面内写死的规则与模板完成。<strong>“AI 评审”是可选功能</strong>：只有点击按钮后，当前模块内容才会发送到本站服务端函数，再转发给 Anthropic 的 Claude API；AI 意见需要人工判断，AI 不检索外部事实。"
     : "当前为<strong>规则型原型，尚未接入 AI</strong>：所有“检查”和“汇总”都来自页面内写死的规则与模板，不会理解开放式语义，也不会检索外部事实。")
@@ -1173,6 +1254,12 @@ function refreshDerived(){
 function renderMain(focus){
   $("#view").innerHTML = exampleBanner() + VIEWS[cur]();
   refreshDerived(); renderChrome();
+  document.body.classList.toggle("ro", !!RO);
+  if (RO){
+    $("#view").querySelectorAll("input,textarea,select").forEach(el=>{ if (!el.closest("[data-derived]")) el.disabled = true; });
+    $("#view").querySelectorAll('[data-act="score"]').forEach(el=>{ el.disabled = true; });
+    $("#view").querySelectorAll('[data-act="add"],[data-act="del"],.banner [data-act="new"]').forEach(el=>{ el.hidden = true; });
+  }
   const curLink = $("#nav a[aria-current]"); if (curLink && window.innerWidth<=900) curLink.scrollIntoView({block:"nearest",inline:"center"});
   if (focus){ window.scrollTo(0,0); const h=$("#view h1"); if(h) h.focus({preventScroll:true}); }
 }
@@ -1211,7 +1298,7 @@ function onInput(e){
       S.channels[i].pct = String(Math.round(pct*100)/100); }
     syncBudget(el); save(); refresh(); return;
   }
-  const path = el.dataset.bind; if (!path) return;
+  const path = el.dataset.bind; if (!path || RO) return;
   if (el.type==="checkbox"){
     if (el.dataset.arr){ const arr=getP(path); const v=el.dataset.arr; const idx=arr.indexOf(v); if (el.checked && idx<0) arr.push(v); if(!el.checked && idx>=0) arr.splice(idx,1); arr.sort((a,b)=>STAGES.indexOf(a)-STAGES.indexOf(b)); }
     else { setP(path, el.checked); }
@@ -1240,6 +1327,15 @@ document.addEventListener("change", e=>{ if (e.target.tagName==="SELECT" || e.ta
 document.addEventListener("click", e=>{
   const b = e.target.closest("[data-act]"); if (!b) return;
   const act = b.dataset.act;
+  if (RO && !["copymd","copytxt","dlmd","export","ro-import"].includes(act)) return;
+  if (act==="ro-import") return askConfirm("会用这份分享替换你本浏览器中的项目（你自己的内容会被覆盖），之后可以自由编辑。建议先在自己的工作台导出备份。", "复制到我的工作台", ()=>{
+    const copy = merge(blank(), JSON.parse(JSON.stringify(S)));
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(copy)); location.href = location.pathname + "#overview"; }
+    catch(_){ toast("浏览器不允许本地保存，无法复制。可以改用“导出项目文件”。", true); }
+  });
+  if (act==="share-create") return createShare();
+  if (act==="share-copy"){ const x=myShares()[+b.dataset.i]; if (x) copyText(shareLink(x.id), "已复制分享链接"); return; }
+  if (act==="share-revoke"){ const x=myShares()[+b.dataset.i]; if (!x) return; return askConfirm(`撤销后，「${x.title}」这个链接将无法再打开，此操作无法恢复。`, "撤销链接", ()=>revokeShare(+b.dataset.i)); }
   if (act==="score"){
     const path=b.dataset.path, v=+b.dataset.v; const now=getP(path);
     setP(path, now===v?0:v);
@@ -1325,7 +1421,7 @@ load();
 window.addEventListener("hashchange", route);
 cur = "__init";
 route();
-checkAI();
+if (SHARE_ID) loadShare(); else { checkAI(); checkShare(); }
 </script>
 </body>
 </html>
