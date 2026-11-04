@@ -247,6 +247,20 @@ svg.chart{width:100%;height:auto;display:block;max-width:100%}
 .report p{margin:0 0 8px}
 .report-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
 
+/* AI panel */
+.ai{display:flex;flex-direction:column;gap:10px;font-size:13.5px}
+.ai .note{margin:0;color:var(--muted);font-size:12.5px}
+.ai details summary{cursor:pointer;font-size:12.5px;color:var(--muted)}
+.ai pre{max-height:220px;overflow:auto;background:var(--sage);padding:10px;font-size:11.5px;font-family:var(--f-mono);white-space:pre-wrap;word-break:break-all;margin:6px 0 0}
+.ai-res{border:1px solid var(--line);background:var(--surface);padding:12px 14px}
+.ai-res .ai-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.ai-res h3{margin:12px 0 6px;font-size:13.5px}
+.ai-res h3:first-of-type{margin-top:0}
+.ai-res p{margin:0 0 6px}
+.lv.ai{background:var(--lime);color:#1E2B27}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-1px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
 /* toast & modal */
 .toasts{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:50;max-width:calc(100vw - 32px)}
 .toast{background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:var(--r);font-size:14px;display:flex;gap:12px;align-items:center;box-shadow:0 4px 18px rgba(0,0,0,.18)}
@@ -301,7 +315,7 @@ footer.note{margin-top:48px;padding-top:14px;border-top:1px solid var(--line);fo
 <div class="shell">
   <nav class="flow" aria-label="策略流程"><ol id="nav"></ol><p class="navnote">流程按因果顺序排列：前一步的输出是后一步的输入。条形表示关键字段的填写完成度，不代表质量。</p></nav>
   <main id="main" tabindex="-1"><div class="wrap" id="view"></div>
-    <footer class="note wrap">当前为<strong>规则型原型，尚未接入 AI</strong>：所有“检查”和“汇总”都来自页面内写死的规则与模板，不会理解开放式语义，也不会检索外部事实。数据只保存在本浏览器的 localStorage（键名 <code>brandlab.v1</code>），不会上传到任何服务器；在“策略总览 → 项目文件”里可以导出、导入或清空。</footer>
+    <footer class="note wrap" id="footNote">当前为<strong>规则型原型，尚未接入 AI</strong>：所有“检查”和“汇总”都来自页面内写死的规则与模板，不会理解开放式语义，也不会检索外部事实。数据只保存在本浏览器的 localStorage（键名 <code>brandlab.v1</code>），不会上传到任何服务器；在“策略总览 → 项目文件”里可以导出、导入或清空。</footer>
   </main>
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
@@ -869,7 +883,8 @@ const DERIVED = {
     return MODS.filter(m=>m.id!=="overview").map(m=>{ const c=completion(m.id);
       return `<a href="#${m.id}"><span class="n">${m.n}</span><b>${m.t}</b>${m.id==="report"?`<span class="pct">自动汇总</span>`:c===null?`<span class="pct">可选 · 未启用</span>`:`<span class="bar"><i style="width:${Math.round(c*100)}%"></i></span><span class="pct">${Math.round(c*100)}%</span>`}</a>`; }).join("");
   },
-  report(){ return reportHTML(); }
+  report(){ return reportHTML(); },
+  ai(task){ return aiHTML(task); }
 };
 
 /* ================= 报告 ================= */
@@ -1004,7 +1019,7 @@ const VIEWS = {
       <div class="layer"><span class="label-cap">③ 洞察假设</span>${fArea(`insights.${i}.statement`,"洞察陈述",{rows:2})}${fText(`insights.${i}.implication`,"对品牌决策的影响")}<div class="row2">${fText(`insights.${i}.validation`,"验证方法")}${fSelect(`insights.${i}.status`,"状态",["待验证","验证中","已验证"])}</div></div></div>`).join("");
     return modHead("insight","按观察、张力、洞察假设三层记录。没有行为或研究证据的内容只能停留在假设层。") + method("insight") + grid(
       `${items||`<p class="empty">还没有洞察。</p>`}<div><button class="btn" data-act="add" data-list="insights">添加洞察</button></div>`,
-      outBox("洞察板","insightBoard","每行从左到右：观察 → 张力 → 洞察假设。") + checkBox("insight"));
+      outBox("洞察板","insightBoard","每行从左到右：观察 → 张力 → 洞察假设。") + checkBox("insight") + aiBox("insight"));
   },
   position(){
     return modHead("position","在目标人群、关键情境与竞争参照中，选择一个可信、可感知的差异点。") + method("position") + grid(
@@ -1012,7 +1027,7 @@ const VIEWS = {
         ${fText("pos.diff","差异化选择理由")}${fArea("pos.proof","支撑证据/品牌能力",{rows:2})}<div class="row2">${fText("pos.personality","品牌个性")}${fText("pos.boundary","表达边界（不说什么）")}</div>
         ${fSelect("pos.capFit","定位与产品/组织能力",["一致","部分一致","不一致"],{empty:"请选择"})}${fArea("pos.risks","定位风险与待验证假设（每行一条）",{rows:2})}</fieldset>
       <fieldset><legend>六维评估（团队自评）</legend><div>${POS_DIMS.map(d=>scoreRow(`pos.scores.${d[0]}`,d[1],d[2])).join("")}</div></fieldset>`,
-      outBox("定位陈述草案","posStatement") + outBox("定位画布","posCanvas") + outBox("六维评估","radar") + checkBox("position"));
+      outBox("定位陈述草案","posStatement") + outBox("定位画布","posCanvas") + outBox("六维评估","radar") + checkBox("position") + aiBox("position"));
   },
   equity(){
     return modHead("equity","用 CBBE 判断品牌资产卡在哪一层，再检查承诺、证据与体验能否支撑信任。框架帮助组织信息，结论仍要靠证据。") + method("equity") + grid(
@@ -1037,7 +1052,7 @@ const VIEWS = {
       <div class="row2">${fText(`channels.${i}.metric`,"衡量指标")}${fText(`channels.${i}.handoff`,"与其他渠道的衔接")}</div></div>`).join("");
     return modHead("imc","以消费者旅程为主线，为每个渠道分配任务。渠道按任务分工，不按流量大小排座次。") + method("imc") + grid(
       `${items||`<p class="empty">还没有渠道。</p>`}<div><button class="btn" data-act="add" data-list="channels">添加渠道</button></div>`,
-      outBox("旅程覆盖矩阵","journey","认知 → 理解 → 信任 → 行动 → 留存/推荐；“断点”表示没有渠道承担该阶段。") + outBox("渠道分工","channelRoles") + checkBox("imc"));
+      outBox("旅程覆盖矩阵","journey","认知 → 理解 → 信任 → 行动 → 留存/推荐；“断点”表示没有渠道承担该阶段。") + outBox("渠道分工","channelRoles") + checkBox("imc") + aiBox("imc"));
   },
   budget(){
     const rows = S.channels.map((c,i)=>`<div class="item"><div class="bud-row"><div class="name">${esc(c.name)||"未命名渠道"}<div class="small muted" style="font-weight:400">${c.stages.map(esc).join(" / ")||"未指定阶段"}</div></div>
@@ -1048,7 +1063,7 @@ const VIEWS = {
     return modHead("budget","输入总预算与各渠道比例或金额，页面实时计算合计并提示超额或未分配。比例是基于目标与不确定性的初始假设，不是计算出的最优解。") + method("budget") + grid(
       `<fieldset><legend>总预算</legend>${fNum("budget.total","总预算",{min:0,max:1e12,suffix:"元",ph:"例如 3000000"})}</fieldset>
       <fieldset><legend>渠道分配</legend>${rows||`<p class="empty">先在“整合传播”中添加渠道，再回来分配预算。<a href="#imc">前往整合传播</a></p>`}</fieldset>`,
-      outBox("分配结果","allocation") + checkBox("budget"));
+      outBox("分配结果","allocation") + checkBox("budget") + aiBox("imc"));
   },
   measure(){
     const items = S.metrics.map((m,i)=>`<div class="item"><div class="item-head"><span class="tag">指标 ${i+1}</span><button class="btn sm ghost danger" data-act="del" data-list="metrics" data-i="${i}">删除</button></div>
@@ -1060,12 +1075,82 @@ const VIEWS = {
       outBox("目标与指标匹配","goalFit") + outBox("指标面板","metricBoard") + checkBox("measure"));
   },
   report(){
-    return modHead("report","从前面各模块自动汇总。修改任何模块后，这里会实时更新。汇总由模板拼接，不是 AI 撰写。") +
+    return modHead("report","从前面各模块自动汇总。修改任何模块后，这里会实时更新。下方报告由模板拼接，不是 AI 撰写；如需 AI 改写成管理层简报，可使用“AI 评审”。") +
       `<div class="report-tools"><button class="btn primary" data-act="copymd">复制报告（Markdown）</button><button class="btn" data-act="copytxt">复制纯文本</button><button class="btn" data-act="dlmd">下载 .md 文件</button><span class="small muted" id="copyHint"></span></div>
-      <div data-derived="report"></div>`;
+      <div style="max-width:820px;margin-bottom:24px">${aiBox("report")}</div><div data-derived="report"></div>`;
   }
 };
 function amtVal(i){ const t=toNum(S.budget.total), p=toNum(S.channels[i]?.pct); return (t>0 && Number.isFinite(p)) ? String(Math.round(t*p/100)) : ""; }
+
+/* ================= AI 评审（可选） ================= */
+const AI_URL = "/api/review";
+const AI_TASKS = {insight:"消费者洞察评审",position:"品牌定位评审",imc:"传播与预算评审",report:"策略简报改写"};
+let AIS = {status:"checking",needsCode:false,model:""}, AIR = {}, aiCode = "";
+try{ aiCode = sessionStorage.getItem("brandlab.aicode")||""; }catch(_){}
+async function checkAI(){
+  if (location.protocol==="file:"){ AIS.status="off"; refreshDerived(); renderChrome(); return; }
+  const ctl=new AbortController(); const tm=setTimeout(()=>ctl.abort(),6000);
+  try{
+    const r = await fetch(AI_URL,{method:"GET",signal:ctl.signal,cache:"no-store"});
+    const d = r.ok ? await r.json() : null;
+    if (d && typeof d.configured==="boolean"){ AIS={status:d.configured?"ok":"nokey",needsCode:!!d.needsCode,model:d.model||""}; }
+    else AIS.status="off";
+  }catch(_){ AIS.status="off"; }
+  finally{ clearTimeout(tm); refreshDerived(); renderChrome(); }
+}
+function aiData(task){
+  const b=S.brief, ex=S.meta.isExample?"是：虚构示例数据，不是真实市场":"否";
+  const brief={品牌:b.name,品类与阶段:b.category,市场:b.market,目标人群:b.audience,目标类型:b.goalType,目标:b.goal,成功指标:b.metric,核心问题:b.problem,约束:b.constraints};
+  if (task==="insight") return {示例数据:ex,项目:brief,已知事实:lines(b.facts),洞察:S.insights};
+  if (task==="position") return {示例数据:ex,项目:brief,购买标准:lines(S.market.criteria),竞争对象:S.market.competitors.map(c=>({名称:c.name,类型:c.kind,定位:c.positioning,证据:c.proof,优势:c.strength,弱点:c.weakness})),机会假设:S.market.opportunity,洞察:S.insights.map(x=>({陈述:x.statement,状态:x.status,证据类型:x.evidenceType,来源:x.source})),定位:S.pos,信任:S.equity.trust};
+  if (task==="imc") return {示例数据:ex,项目:brief,定位陈述:positioningStatement().replace(/<[^>]+>/g,""),总预算_元:S.budget.total,渠道:S.channels,指标:S.metrics};
+  return {示例数据:ex,项目:b,市场:S.market,洞察:S.insights,定位:S.pos,品牌资产:S.equity,品牌延伸:S.ext.enabled?S.ext:"未评估",渠道:S.channels,预算:S.budget,指标:S.metrics,下一步:lines(S.overview.next),规则检查发现的问题:runChecks().filter(c=>c.lvl!=="ok").map(c=>LV[c.lvl]+"："+c.msg)};
+}
+function mdLite(t){
+  let h="", ul=false; const close=()=>{ if(ul){h+="</ul>";ul=false;} };
+  for (const raw of String(t).split("\n")){
+    const l=raw.trim().replace(/\*\*/g,"");
+    if (!l){ close(); continue; }
+    if (/^#{1,4}\s/.test(l)){ close(); h+=`<h3>${esc(l.replace(/^#+\s*/,""))}</h3>`; }
+    else if (/^([-•*]|\d+[.、])\s*/.test(l)){ if(!ul){h+='<ul class="plain">';ul=true;} h+=`<li>${esc(l.replace(/^([-•*]|\d+[.、])\s*/,""))}</li>`; }
+    else { close(); h+=`<p>${esc(l)}</p>`; }
+  }
+  close(); return h;
+}
+function aiHTML(task){
+  if (AIS.status==="checking") return `<p class="note muted small">正在检查本站是否提供 AI 服务…</p>`;
+  if (AIS.status==="off") return `<div class="ai"><p class="note">AI 评审需要部署在带服务端函数的 Netlify 站点上。当前打开方式（本地文件、GitHub Pages 或预览）没有可用的 AI 服务，所以不提供评审按钮；上方的规则型检查照常可用。</p></div>`;
+  if (AIS.status==="nokey") return `<div class="ai"><p class="note">站点已部署，但管理员还没有在 Netlify 中配置 ANTHROPIC_API_KEY，暂时无法评审。</p></div>`;
+  const r = AIR[task]||{};
+  const payload = JSON.stringify(aiData(task),null,1);
+  return `<div class="ai">
+    <p class="note">只有点击按钮才会发送：本模块相关内容（约 ${NF.format(payload.length)} 字符）会发到本站服务端函数，再转发给 Anthropic 的 Claude API${AIS.model?"（"+esc(AIS.model)+"）":""}。结果是 AI 生成的意见，需要人工判断。</p>
+    ${AIS.needsCode?`<div class="field"><label for="aiCode-${task}">访问码</label><input type="text" id="aiCode-${task}" data-aicode="1" value="${esc(aiCode)}" autocomplete="off" placeholder="向站点管理员索取"></div>`:""}
+    <div class="btns"><button class="btn primary" data-act="ai-run" data-task="${task}" ${r.loading?"disabled":""}>${r.loading?'<span class="spin" aria-hidden="true"></span> 评审中，约需 10–25 秒':(r.text?"重新评审":"请 AI 评审")}</button>${r.text?`<button class="btn" data-act="ai-copy" data-task="${task}">复制评审意见</button>`:""}</div>
+    <details><summary>查看将发送的内容</summary><pre>${esc(payload)}</pre></details>
+    ${r.error?`<p class="err" role="alert">评审失败：${esc(r.error)}</p>`:""}
+    ${r.text?`<div class="ai-res"><div class="ai-meta"><span class="lv ai">AI 生成 · 需人工判断</span><span class="small muted">${esc(AI_TASKS[task])} · ${esc(r.model||"")} · ${r.at.toLocaleTimeString("zh-CN",{hour:"2-digit",minute:"2-digit"})}${r.truncated?" · 输出被截断":""}</span></div>${mdLite(r.text)}<p class="small muted" style="margin-top:8px">评审基于发送时的内容；之后修改不会自动更新，可重新评审。刷新页面后结果不保留。</p></div>`:""}
+  </div>`;
+}
+async function runAI(task){
+  if (AIR[task]?.loading) return;
+  if (AIS.needsCode && !aiCode.trim()){ AIR[task]={...AIR[task],error:"请先填写访问码。"}; refreshDerived(); return; }
+  AIR[task]={loading:true}; refreshDerived();
+  const ctl=new AbortController(); const tm=setTimeout(()=>ctl.abort(),45000);
+  try{
+    const headers={"content-type":"application/json"}; if (aiCode.trim()) headers["x-access-code"]=aiCode.trim();
+    const r = await fetch(AI_URL,{method:"POST",headers,body:JSON.stringify({task,data:aiData(task)}),signal:ctl.signal});
+    let d={}; try{ d=await r.json(); }catch(_){}
+    if (!r.ok || !d.text) throw new Error(d.error || (r.status>=500?`服务器超时或出错（HTTP ${r.status}），请稍后重试。`:`请求失败（HTTP ${r.status}）。`));
+    AIR[task]={text:d.text,model:d.model,truncated:d.truncated,at:new Date()};
+    toast(`${AI_TASKS[task]}已完成`);
+  }catch(e){
+    AIR[task]={error: e.name==="AbortError" ? "等待超过 45 秒，已取消。可以精简内容后重试。" : (e.message||"网络错误。")};
+    toast("AI 评审失败", true);
+  }finally{ clearTimeout(tm); refreshDerived(); }
+}
+document.addEventListener("input", e=>{ if (e.target.dataset && e.target.dataset.aicode){ aiCode=e.target.value; try{ sessionStorage.setItem("brandlab.aicode",aiCode); }catch(_){} } });
+function aiBox(task){ return `<section class="out"><h2>AI 评审 <span class="lv ai" style="vertical-align:3px">可选</span></h2><div data-derived="ai:${task}"></div></section>`; }
 
 /* ================= 渲染 ================= */
 function renderChrome(){
@@ -1073,7 +1158,11 @@ function renderChrome(){
     const dot = m.id==="overview"||m.id==="report" ? "<span></span>" : c===null ? `<span class="dot opt" title="可选"></span>` : `<span class="dot" title="完成度 ${Math.round(c*100)}%"><i style="width:${Math.round(c*100)}%"></i></span>`;
     return `<li><a href="#${m.id}" ${m.id===cur?'aria-current="page"':""}><span class="n">${m.n}</span><span>${m.t}</span>${dot}</a></li>`; }).join("");
   $("#topProj").innerHTML = `项目：<strong>${esc(S.brief.name)||"未命名项目"}</strong> · ${esc(S.meta.stage)}`;
-  $("#topBadges").innerHTML = `${S.meta.isExample?'<span class="badge ex">示例数据</span>':""}<span class="badge rule">规则型原型 · 未接入 AI</span><span class="badge">仅本地保存</span>`;
+  $("#topBadges").innerHTML = `${S.meta.isExample?'<span class="badge ex">示例数据</span>':""}<span class="badge rule">${AIS.status==="ok"?"规则检查 + 可选 AI 评审":"规则型原型 · 未接入 AI"}</span><span class="badge">仅本地保存</span>`;
+  $("#footNote").innerHTML = (AIS.status==="ok"
+    ? "质量检查与报告汇总由页面内写死的规则与模板完成。<strong>“AI 评审”是可选功能</strong>：只有点击按钮后，当前模块内容才会发送到本站服务端函数，再转发给 Anthropic 的 Claude API；AI 意见需要人工判断，AI 不检索外部事实。"
+    : "当前为<strong>规则型原型，尚未接入 AI</strong>：所有“检查”和“汇总”都来自页面内写死的规则与模板，不会理解开放式语义，也不会检索外部事实。")
+    + " 项目数据保存在本浏览器的 localStorage（键名 <code>brandlab.v1</code>），除了你主动点击的 AI 评审，不会上传到任何服务器；在“策略总览 → 项目文件”里可以导出、导入或清空。";
 }
 function refreshDerived(){
   document.querySelectorAll("[data-derived]").forEach(el=>{
@@ -1157,6 +1246,8 @@ document.addEventListener("click", e=>{
     b.parentElement.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", String(+x.dataset.v===getP(path))));
     save(); refresh(); return;
   }
+  if (act==="ai-run") return runAI(b.dataset.task);
+  if (act==="ai-copy"){ const r=AIR[b.dataset.task]; if (r&&r.text) copyText(r.text, "已复制评审意见"); return; }
   if (act==="add"){
     const path=b.dataset.list; const arr=getP(path);
     const tpl = path==="market.competitors"?T.competitor():path==="insights"?T.insight():path==="channels"?T.channel():T.metric();
@@ -1234,6 +1325,7 @@ load();
 window.addEventListener("hashchange", route);
 cur = "__init";
 route();
+checkAI();
 </script>
 </body>
 </html>
