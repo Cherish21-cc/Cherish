@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>小店人生｜这条街上还差一家店</title>
+<meta name="description" content="文字模拟经营游戏：起店名、画招牌、在地图上选址，过完创业的第一年。一局 10 分钟，7 种结局。">
+<style>
+:root{
+  --bun:#f6e7c8; --paper:#fffaf0; --ink:#26201c; --muted:#7b6a58; --rule:#26201c;
+  --ketchup:#cf3b27; --mustard:#f0ad2c; --lettuce:#3d8b4b; --sea:#2f7fa3; --lock:#e9dcc0;
+}
+@media (prefers-color-scheme: dark){
+  :root{ color-scheme:dark;
+    --bun:#1c1713; --paper:#27201a; --ink:#f4e8d2; --muted:#b5a48e; --rule:#0c0907;
+    --ketchup:#e2553f; --mustard:#f0ad2c; --lettuce:#63b873; --sea:#4aa3c9; --lock:#352b22;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bun);color:var(--ink)}
+body{font-family:"PingFang SC","HarmonyOS Sans SC","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+  line-height:1.6;min-height:100dvh;padding:12px 12px 40px;display:flex;justify-content:center}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--sea);outline-offset:2px}
+.shell{width:100%;max-width:440px}
+/* 顶栏 */
+.hud{display:none;gap:10px;align-items:center;background:var(--paper);border:2.5px solid var(--rule);border-radius:12px;
+  padding:8px 10px;box-shadow:0 4px 0 var(--rule);margin-bottom:14px}
+.hud.on{display:flex}
+.hud .nm{font-weight:800;font-size:14px;line-height:1.2}
+.hud .nm small{display:block;font-weight:500;color:var(--muted);font-size:11px}
+.stats{margin-left:auto;display:grid;grid-template-columns:repeat(5,auto);gap:2px 10px;font-size:11px;color:var(--muted);text-align:right}
+.stats b{display:block;color:var(--ink);font-size:13px;font-variant-numeric:tabular-nums}
+.hud{flex-wrap:wrap}
+.money{margin-left:auto;display:flex;gap:12px;font-size:11px;color:var(--muted);text-align:right}
+.money b{display:block;color:var(--ink);font-size:14px;font-variant-numeric:tabular-nums}
+.needs{flex:1 0 100%;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:2px}
+.need{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.need i{flex:1;height:9px;border:1.5px solid var(--rule);border-radius:99px;background:var(--lock);overflow:hidden;display:block}
+.need i::before{content:"";display:block;height:100%;width:var(--v);background:var(--c);transition:width .6s}
+.need b{color:var(--ink);font-variant-numeric:tabular-nums;min-width:18px;text-align:right}
+#scene{border:2.5px solid var(--rule);border-radius:14px;overflow:hidden;box-shadow:0 4px 0 var(--rule);margin-bottom:14px;background:#bfe6f2;line-height:0}
+#scene svg{display:block;width:100%;height:auto}
+.wk{animation-timing-function:linear;animation-iteration-count:infinite}
+.wk.in{animation-name:wkIn}.wk.by{animation-name:wkBy}
+@keyframes wkIn{0%{transform:translateX(-30px);opacity:1}84%{transform:translateX(223px);opacity:1}92%,100%{transform:translateX(223px);opacity:0}}
+@keyframes wkBy{0%{transform:translateX(-30px)}100%{transform:translateX(400px)}}
+.bob{animation:bob .32s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translateY(-1.6px)}}
+.coin{animation:coin 1.1s ease-out infinite;opacity:0}
+@keyframes coin{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(-46px);opacity:0}}
+.fall{animation:fall linear infinite}
+@keyframes fall{from{transform:translateY(-20px)}to{transform:translateY(200px)}}
+.cloud{animation:cloud 40s linear infinite}
+@keyframes cloud{from{transform:translateX(-80px)}to{transform:translateX(400px)}}
+.months{display:flex;gap:6px;margin:10px 0 4px}
+.months span{flex:1;text-align:center;font-size:13px;font-weight:800;padding:8px 0;border:2px solid var(--rule);border-radius:10px;background:var(--paper);opacity:.35;animation:mon .01s forwards}
+.months span:nth-child(1){animation-delay:.1s}.months span:nth-child(2){animation-delay:.9s}.months span:nth-child(3){animation-delay:1.7s}
+@keyframes mon{to{opacity:1;background:var(--mustard);color:#26201c}}
+@media (prefers-reduced-motion: reduce){.wk,.bob,.coin,.fall,.cloud{animation:none}.wk.in{opacity:0}.coin{opacity:1}}
+/* 版面 */
+h1{font-size:50px;font-weight:900;line-height:1.02;letter-spacing:2px}
+h2{font-size:22px;font-weight:900;margin-bottom:4px}
+.lead{color:var(--muted);font-size:14px;margin-bottom:14px}
+.step{font-size:12px;font-weight:800;color:var(--ketchup);margin-bottom:2px}
+.opt{display:block;width:100%;text-align:left;background:var(--paper);border:2.5px solid var(--rule);border-radius:12px;
+  padding:12px 14px;margin-bottom:10px;box-shadow:0 4px 0 var(--rule)}
+.opt:active{transform:translateY(2px);box-shadow:0 2px 0 var(--rule)}
+.opt b{display:block;font-size:16px}
+.opt span{font-size:13px;color:var(--muted)}
+.opt[disabled]{opacity:.55;box-shadow:none;cursor:not-allowed}
+.go{display:block;width:100%;background:var(--ketchup);color:#fff8ec;border:2.5px solid var(--rule);border-radius:999px;
+  padding:13px;font-size:17px;font-weight:900;box-shadow:0 5px 0 var(--rule);margin-top:14px}
+.go:active{transform:translateY(3px);box-shadow:0 2px 0 var(--rule)}
+.go.alt{background:var(--mustard);color:#26201c}
+.link{background:none;border:none;text-decoration:underline;font-size:13px;color:var(--muted);margin-top:14px;display:block;width:100%;text-align:center}
+.field{margin-bottom:14px}
+.field label,.field .lb{display:block;font-size:13px;font-weight:800;margin-bottom:6px}
+input[type=text]{width:100%;font:inherit;font-size:18px;font-weight:800;padding:10px 12px;border:2.5px solid var(--rule);
+  border-radius:10px;background:var(--paper);color:var(--ink)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1 1 0;min-width:64px;background:var(--paper);border:2px solid var(--rule);border-radius:10px;padding:8px 4px;font-size:13px;font-weight:700;line-height:1.3}
+.seg button small{display:block;font-weight:500;font-size:11px;color:var(--muted)}
+.seg button[aria-pressed=true]{background:var(--mustard);color:#26201c}
+.seg button[aria-pressed=true] small{color:#5a4310}
+.sw{width:40px;height:40px;flex:0 0 40px!important;min-width:0!important;border-radius:50%!important;padding:0!important}
+.sw[aria-pressed=true]{outline:3px solid var(--ink);outline-offset:2px}
+.logoBox{display:flex;align-items:center;gap:14px;background:var(--paper);border:2.5px dashed var(--rule);border-radius:12px;padding:12px;margin-bottom:14px}
+.logoBox .n{font-size:22px;font-weight:900;line-height:1.2;word-break:break-all}
+.logoBox small{color:var(--muted);font-size:12px}
+/* 事件卡 */
+.ev{background:var(--paper);border:2.5px solid var(--rule);border-radius:14px;padding:16px;box-shadow:0 5px 0 var(--rule);margin-bottom:14px}
+.ev .tg{display:inline-block;font-size:12px;font-weight:800;padding:1px 10px;border-radius:999px;background:var(--sea);color:#fff;margin-bottom:8px}
+.ev .tg.biz{background:var(--ketchup)}
+.ev p{font-size:15px}
+/* 小票 */
+.rcpt{background:var(--paper);border-left:2.5px solid var(--rule);border-right:2.5px solid var(--rule);padding:16px 16px 10px;
+  border-top:2.5px dashed var(--rule);border-bottom:2.5px dashed var(--rule);font-variant-numeric:tabular-nums}
+.rcpt .hd{text-align:center;font-weight:900;font-size:17px}
+.rcpt .sub{text-align:center;font-size:12px;color:var(--muted);margin-bottom:8px}
+.row{display:flex;justify-content:space-between;font-size:14px;padding:2px 0}
+.row.t{border-top:2px dashed var(--rule);margin-top:6px;padding-top:8px;font-weight:900;font-size:17px}
+.pos{color:var(--lettuce)} .neg{color:var(--ketchup)}
+.delta{font-size:13px;color:var(--muted);margin-top:8px}
+.clue{background:var(--lock);border:2px solid var(--rule);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:14px}
+.clue b{display:block;font-size:13px}
+.clue button{margin-top:6px;background:var(--mustard);color:#26201c;border:2px solid var(--rule);border-radius:8px;padding:5px 12px;font-weight:800;font-size:13px}
+.clue button[disabled]{opacity:.5;cursor:not-allowed}
+.clue.open{background:var(--paper);border-style:dashed}
+.note{font-size:13px;color:var(--muted);margin-top:10px}
+/* 钓鱼 */
+dialog{border:2.5px solid var(--rule);border-radius:14px;background:var(--paper);color:var(--ink);width:min(94vw,440px);max-height:88dvh;padding:0;margin:auto}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+.dh{position:sticky;top:0;background:var(--paper);display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:2px solid var(--rule)}
+.dh h3{font-size:17px}
+.dh button{background:none;border:2px solid var(--rule);border-radius:8px;padding:2px 10px;font-weight:700}
+.db{padding:12px 16px 18px;font-size:14px}
+.db h4{color:var(--ketchup);margin:14px 0 4px;font-size:14px}
+.db li{margin-left:18px;margin-bottom:4px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+th,td{border:1px solid var(--muted);padding:3px 5px;text-align:center}
+canvas{display:block;width:100%;height:auto;touch-action:manipulation}
+.fishBar{display:flex;justify-content:space-between;gap:10px;padding:8px 14px;font-weight:800;font-size:14px}
+
+/* 开场 */
+.intro{min-height:78dvh;display:flex;flex-direction:column;justify-content:center;cursor:pointer}
+.intro .cap{font-size:13px;font-weight:800;color:var(--ketchup);margin-bottom:10px;letter-spacing:2px}
+.phone{position:relative;width:78%;max-width:300px;margin:0 auto;border:3px solid var(--rule);border-radius:26px;background:var(--paper);padding:34px 12px 16px;box-shadow:0 6px 0 var(--rule);min-height:330px;overflow:hidden}
+.phone::before{content:"";position:absolute;top:12px;left:50%;width:60px;height:8px;margin-left:-30px;border-radius:9px;background:var(--rule)}
+.ntf{background:var(--bun);border:2px solid var(--rule);border-radius:12px;padding:7px 10px;margin-bottom:7px;font-size:12.5px;line-height:1.4;opacity:0;transform:translateY(-18px);animation:ntf .35s ease-out forwards}
+.ntf b{display:block;font-size:12px}
+@keyframes ntf{to{opacity:1;transform:none}}
+.cnt{text-align:center;font-weight:900;font-size:15px;margin-top:14px}
+.cnt b{font-size:34px;color:var(--ketchup);font-variant-numeric:tabular-nums}
+.big{font-size:46px;font-weight:900;line-height:1.15;text-align:center}
+.big em{font-style:normal;color:var(--ketchup)}
+.big .l{display:block;opacity:0;transform:translateY(14px);animation:ntf .45s ease-out forwards}
+.stamp{display:inline-block;margin:22px auto 0;border:5px solid var(--ketchup);color:var(--ketchup);font-size:30px;font-weight:900;padding:2px 18px;border-radius:10px;transform:rotate(-9deg) scale(2.4);opacity:0;animation:stamp .3s 1.1s cubic-bezier(.2,1.4,.4,1) forwards}
+@keyframes stamp{to{opacity:.92;transform:rotate(-9deg) scale(1)}}
+.flash{position:fixed;inset:0;background:#fff;pointer-events:none;animation:flash 1.3s ease-out forwards}
+@keyframes flash{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
+.tapn{text-align:center;font-size:12px;color:var(--muted);margin-top:22px}
+.frag{border-left:4px solid var(--lettuce);padding:6px 10px;margin-bottom:8px;background:color-mix(in srgb,var(--lettuce) 10%,transparent)}
+.frag b{display:block;font-size:14px}.frag span{font-size:13px}
+.frag.lock{border-left-color:var(--muted);background:none;color:var(--muted);font-size:13px}
+@media (prefers-reduced-motion: reduce){.ntf,.big .l,.stamp{animation:none;opacity:1;transform:none}.stamp{transform:rotate(-9deg)}.flash{display:none}}
+.skip{position:fixed;top:14px;right:14px;z-index:5;background:var(--mustard);color:#26201c;border:2.5px solid var(--rule);border-radius:999px;padding:8px 16px;font-weight:900;font-size:14px;box-shadow:0 4px 0 var(--rule)}
+.mem{background:var(--ink);color:var(--bun);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:15px;line-height:1.6}
+.mem b{display:block;font-size:12px;letter-spacing:2px;color:var(--mustard);margin-bottom:2px}
+.mem small{display:block;margin-top:6px;font-size:12px;opacity:.75}
+/* v3 新增 */
+.map{position:relative;border:2.5px solid var(--rule);border-radius:14px;overflow:hidden;box-shadow:0 4px 0 var(--rule);line-height:0}
+.map svg{width:100%;height:auto;display:block}
+.pin{position:absolute;transform:translate(-50%,-50%);background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;line-height:1.2}
+.pin i{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--ketchup);border:2.5px solid #26201c;display:grid;place-items:center;box-shadow:2px 2px 0 #26201c}
+.pin i svg{transform:rotate(45deg);width:18px;height:18px}
+.pin b{font-size:12px;font-weight:800;background:#fffaf0;color:#26201c;border:2px solid #26201c;border-radius:99px;padding:1px 8px;white-space:nowrap}
+.pin[aria-pressed=true] i{background:var(--mustard);width:38px;height:38px}
+.pin[aria-pressed=true] b{background:var(--mustard)}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chips button{text-align:left;background:var(--paper);border:2px solid var(--rule);border-radius:10px;padding:8px 10px;line-height:1.35}
+.chips button b{display:block;font-size:14px}
+.chips button span{font-size:12px;color:var(--muted)}
+.chips button[aria-pressed=true]{background:var(--mustard);color:#26201c}
+.chips button[aria-pressed=true] span{color:#5a4310}
+.chips button:last-child:nth-child(odd){grid-column:1 / -1}
+.tabs{display:flex;gap:6px;margin-bottom:-2.5px;position:relative;z-index:1;padding:0 10px}
+.tabs button{flex:1;background:var(--lock);border:2.5px solid var(--rule);border-radius:12px 12px 0 0;padding:6px 4px;font-weight:800;font-size:14px;line-height:1.25}
+.tabs button small{display:block;font-weight:500;font-size:11px;color:var(--muted)}
+.tabs button[aria-pressed=true]{background:var(--paper);border-bottom-color:var(--paper)}
+.panel{background:var(--paper);border:2.5px solid var(--rule);border-radius:12px;padding:12px;margin-bottom:14px}
+.ptitle{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:8px}
+.panel .seg button,.panel .chips button{background:var(--bun)}
+.panel .seg button[aria-pressed=true],.panel .chips button[aria-pressed=true]{background:var(--mustard)}
+.sell{margin-top:20px;border-top:2.5px solid var(--rule)}
+.sell div{padding:10px 0;border-bottom:2px dashed var(--rule)}
+.sell b{display:block;font-size:16px}
+.sell span{font-size:13px;color:var(--muted)}
+.ends{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.ends div{background:var(--lock);border:2px dashed var(--rule);border-radius:10px;padding:8px 10px;line-height:1.35}
+.ends b{display:block;font-size:14px}
+.ends span{font-size:12px;color:var(--muted)}
+.ends .got{background:var(--paper);border-style:solid;box-shadow:0 3px 0 var(--rule)}
+.ends .got span{color:var(--lettuce);font-weight:800}
+.ends div:last-child:nth-child(odd){grid-column:1 / -1}
+.poster{display:block;width:72%;margin:0 auto 4px;border:2.5px solid var(--rule);border-radius:10px;box-shadow:0 4px 0 var(--rule);aspect-ratio:3/4;background:var(--lock)}
+.share{display:flex;gap:8px}.share .go{flex:1 1 0;width:auto;min-width:0;font-size:15px;margin-top:10px;padding:12px 6px}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div id="scene" aria-hidden="true"></div>
+  <div class="hud" id="hud"></div>
+  <main id="app"></main>
+</div>
+
+<dialog id="dlgFish">
+  <div class="fishBar"><span id="fishInfo">点水面，把钩抛过去</span><span id="fishTime">饵 4 份</span></div>
+  <canvas id="fc" width="360" height="420" aria-label="钓鱼小游戏，点击或按空格下钩"></canvas>
+  <div class="db" id="fishEnd" style="display:none"></div>
+</dialog>
+
+<dialog id="dlgCV">
+  <div class="dh"><h3>上一世的简历</h3><button id="cvClose">关闭</button></div>
+  <div class="db" id="cvBody"></div>
+</dialog>
+
+<dialog id="dlgNote">
+  <div class="dh"><h3>策划笔记</h3><button id="noteClose">关闭</button></div>
+  <div class="db">
+    <h4>一句话</h4>
+    <p>《小店人生》是一款文字模拟经营游戏：开一家店，过一个人的日子。生意和生活共用同一份时间。</p>
+    <h4>怎么让人愿意点进来</h4>
+    <ul>
+      <li>开场 10 秒讲一个所有应届生都懂的梗：上一世秋招拿大后果，这一世开店拿大结果。</li>
+      <li>钓鱼支线把策划本人的简历做成收集品，漂流瓶里是“上一世没有回音的简历”。</li>
+      <li>首页先给画面：一条在动的街，中间那家店的招牌写着“你的店名”。</li>
+      <li>第一步就让玩家留下自己的东西：店名和招牌。投入越早，越不容易走。</li>
+      <li>首页直接亮出 7 个结局的名字，只藏故事，让人想知道自己会是哪一个。</li>
+      <li>结局生成一张带玩家店名的海报和一句分享文案，由玩家带来下一个玩家。</li>
+      <li>门槛写在按钮下面：不用下载，不用注册，一局 10 分钟。</li>
+    </ul>
+    <h4>主线：开店与经营</h4>
+    <p>店名与招牌 → 地图选址 → 客群 → 菜单 → 装修 → 贷款 → 每季度决策 → 季度账单 → 开分店并单独规划。</p>
+    <h4>核心机制：重生的人知道后果，但要付代价</h4>
+    <p>每季度发生一件事，两个选项的后果默认看不清。花 1 枚经营币可以“回想上一世”，看清后果，并读到一句上一世的记忆。生意上的事如果对应的那页简历已经找回，就能免费想起来；生活里的事没有简历可查，只能花币或凭直觉。</p>
+    <h4>经营币的另一个用处：买原因</h4>
+    <p>账单只告诉你赚了还是亏了。为什么亏，要用经营币解锁线索。客群对产品和装修的偏好在开店时只给文字暗示，准确数字藏在线索里。</p>
+    <h4>支线：生活</h4>
+    <p>每季度的时间只能分给店、家人或自己。健康太低会影响营业，关系太低会改变结局。钓鱼每季度一次：抛竿、等浮漂、咬钩时收线。带 4 份饵，没有倒计时，坐下来就能恢复健康。</p>
+    <h4>数值（本 demo 实际使用）</h4>
+    <table id="tblLoc"></table>
+    <table id="tblProd" style="margin-top:8px"></table>
+    <table id="tblStyle" style="margin-top:8px"></table>
+    <p class="note">客流 = 基础客流 × 选址匹配 × 产品偏好 × 装修偏好 × 定价影响 × 口碑系数 × 营销。分店由店长代管，效率 85%；和总店同区再打 85 折。</p>
+    <h4>没有唯一正确答案</h4>
+    <ul>
+      <li>热门客群匹配高，但同行会跟进，每季度降 0.08；冷门客群起步低，但熟客每季度涨 0.08，换客群清零。</li>
+      <li>每群人最爱的那款产品，成本也最高。炸鸡堡最便宜，但没人特别爱。</li>
+      <li>达人探店会放大口碑：店合客人心意就 +3，不合就 -2。</li>
+      <li>钓到的每一页简历，都是一项带进这一世的经验（见“上一世的简历”）。</li>
+      <li>经营币只有一份：用来预知事件的后果，还是用来查账单背后的原因。</li>
+    </ul>
+    <h4>几个取舍</h4>
+    <ul>
+      <li>第一年只有 4 个季度，10 分钟内能打完一局。</li>
+      <li>不贷款最安全也最脆弱：一个亏损季度就可能关门。</li>
+      <li>分店有门槛（现金与口碑），开了以后健康每季度多掉 6 点。</li>
+      <li>结局同时看钱、口碑、健康和关系，没有唯一的“赢”。</li>
+    </ul>
+    <h4>后续计划</h4>
+    <ul>
+      <li>披萨店：沙盘模式，在店内摆桌椅、动线和外卖窗口。</li>
+      <li>更长的人生：第二年到第十年，合伙、扩张、转行、成家。</li>
+    </ul>
+    <h4>制作</h4>
+    <p>创意、方向与每一轮修改意见：方鼎芸（市场营销硕士）。程序实现、数值与文案初稿：与 Claude 协作完成。</p>
+  </div>
+</dialog>
+
+<script>
+(() => {
+const $=id=>document.getElementById(id), app=$('app');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const yuan=n=>(n<0?'-':'')+'¥'+Math.abs(Math.round(n)).toLocaleString('en-US');
+const clamp=v=>Math.max(0,Math.min(100,Math.round(v)));
+const isNight=()=>matchMedia('(prefers-color-scheme: dark)').matches;
+
+/* ---------- 数值配置 ---------- */
+const LOC={
+  uni:{n:'大学城',d:'租金低，晚上和周末热闹，寒暑假冷清。',base:3800,rent:24000,mix:{stu:60,white:15,fam:25},x:23,y:30},
+  office:{n:'写字楼',d:'租金最贵，工作日午餐是高峰。',base:4200,rent:54000,mix:{stu:15,white:65,fam:20},x:72,y:38},
+  home:{n:'社区街角',d:'租金适中，熟客多，生意平稳。',base:3600,rent:30000,mix:{stu:20,white:25,fam:55},x:36,y:78},
+};
+const TG={stu:{n:'学生',d:'人多，爱尝新，爱拍照，对价格敏感。'},white:{n:'白领',d:'赶时间，吃得清淡，愿意为品质多付一点。'},fam:{n:'家庭',d:'看重干净、分量，还有能不能坐下来。'}};
+const MATCH={uni:{stu:1.25,white:.8,fam:.9},office:{stu:.8,white:1.25,fam:.85},home:{stu:.9,white:.95,fam:1.25}};
+const PRICE={low:{n:'低价',p:22,vol:1.2},mid:{n:'中价',p:30,vol:1},high:{n:'高价',p:40,vol:.75}};
+const TPRICE={stu:{low:1.1,mid:1,high:.75},white:{low:.95,mid:1,high:1.1},fam:{low:1,mid:1.05,high:.85}};
+const PROD={
+  beef:{n:'经典牛肉堡',d:'谁点都不会出错的一款。',cost:0,pref:{stu:1,white:1.05,fam:1.05}},
+  chicken:{n:'炸鸡堡',d:'便宜、顶饱，成本最低，没人特别爱。',cost:-.03,pref:{stu:1.05,white:.9,fam:1}},
+  veg:{n:'牛油果轻食堡',d:'热量低，卖相好，食材很贵。',cost:.10,pref:{stu:.9,white:1.2,fam:.9}},
+  kids:{n:'儿童套餐',d:'小份加玩具，玩具要钱。带孩子的才会点。',cost:.09,pref:{stu:.8,white:.8,fam:1.25}},
+  odd:{n:'每季限定怪味堡',d:'这一季是螺蛳粉味。研发和备料都贵，爱尝新的人会专门来。',cost:.10,pref:{stu:1.25,white:1,fam:.8}},
+};
+const STYLE={
+  retro:{n:'美式复古',d:'红白格和霓虹灯。已含在开店预算里。',cost:0,wall:'#f3e2c2',pref:{stu:1.1,white:1,fam:1}},
+  ins:{n:'奶油拍照风',d:'每个角落都能出片。',cost:10000,wall:'#fbd9d9',pref:{stu:1.15,white:1.05,fam:.9}},
+  wood:{n:'温馨木质',d:'宽桌子，儿童椅，坐得住。',cost:8000,wall:'#d6ae7e',pref:{stu:.95,white:1,fam:1.15}},
+  fast:{n:'极简快取',d:'站着点，拿了走，三分钟出餐。',cost:5000,wall:'#e6ecef',pref:{stu:1,white:1.15,fam:.85}},
+};
+const MKT={none:{n:'不做',c:0,m:1,rep:0},some:{n:'发传单',c:5000,m:1.1,rep:1},big:{n:'找达人探店',c:15000,m:1.22,rep:3}};
+const TIME={shop:{n:'守在店里',d:'口碑+4 健康-12 关系-8',rep:4,h:-12,r:-8},
+            mix:{n:'两头兼顾',d:'口碑+1 健康-5 关系-2',rep:1,h:-5,r:-2},
+            life:{n:'多陪家人',d:'口碑-2 健康+2 关系+8',rep:-2,h:2,r:8}};
+const LOAN={none:{n:'不贷款',d:'用 9 万积蓄开店，开业后手里剩 3 万（再扣装修费）。',cash:30000,pay:0,rep:0},
+            small:{n:'贷 10 万',d:'手里有 13 万周转，每季度还 1.4 万。',cash:130000,pay:14000,rep:0},
+            big:{n:'贷 25 万',d:'多请一位熟手（口碑+8），手里 23 万，每季度还 3.4 万。',cash:230000,pay:34000,rep:8}};
+const LABOR=54000, FOOD=.38, BRANCH_COST=100000, BR_CASH=120000, BR_REP=65, QUARTERS=4;
+const SHAPES={circle:'圆形',shield:'盾形',square:'方形'}, COLORS=['#cf3b27','#f0ad2c','#3d8b4b','#2f7fa3','#26201c'];
+const ICONS={burger:'汉堡',crown:'皇冠',flame:'火焰',star:'星星'};
+const SHOPNAME=['总店','分店'];
+const EVENTS=[
+ [ {pg:2,mem:'上一世你在字节实习，分析过平台电商的流量和广告渠道。你记得：平台带来的单多，利润薄。',tag:'生意',title:'外卖平台找上门',text:'平台业务员说，入驻后订单至少多一成半，但每单要抽走一部分。',
+    opts:[{l:'入驻',n:'以后每季度客流 +15%，成本率 +6%',fx:{flag:'delivery'}},{l:'先不入驻',n:'保持现状',fx:{}}]},
+   {pg:1,mem:'上一世你修过人力资源管理。你记得课上那句话：熟手走掉的代价，比涨的那点工资高。',tag:'生意',title:'老店员想涨工资',text:'开业就跟着你的店员说，隔壁奶茶店开的工资更高。',
+    opts:[{l:'给他涨',n:'以后每季度人工 +6,000，口碑 +3',fx:{raise:6000,rep:3}},{l:'再等等',n:'他走了，新人手生，口碑 -5',fx:{rep:-5}}]} ],
+ [ {mem:'上一世的这一天，你在改第十四版简历，没有回去。',tag:'生活',title:'妈妈的生日在周六',text:'周六是一周里最忙的一天。妈妈在电话里说“忙就别回来了”。',
+    opts:[{l:'关店半天，回家吃饭',n:'关系 +10，本季客流 -3%',fx:{rel:10,cust:.97}},{l:'留在店里',n:'关系 -10，口碑 +2',fx:{rel:-10,rep:2}}]},
+   {mem:'上一世你也说了“改天”。后来没有改天了。',tag:'生活',title:'“你三个月没好好吃过一顿饭了”',text:'说这话的人已经在店门口等了你四十分钟。',
+    opts:[{l:'今晚早点打烊',n:'关系 +12，现金 -2,000',fx:{rel:12,cash:-2000}},{l:'改天吧',n:'关系 -12',fx:{rel:-12}}]} ],
+ [ {pg:2,mem:'上一世你写过抖音、快手、微视的竞品对比报告。你记得：跟着对手降价的那一方，很少是赢家。',tag:'生意',title:'对面开了一家连锁汉堡',text:'开业第一周全场半价，你的午市少了一排队伍。',
+    opts:[{l:'降价应战',n:'本季每单少收 3 元，客流 +8%',fx:{price:-3,cust:1.08}},{l:'做一款招牌新品',n:'现金 -8,000，口碑 +6',fx:{cash:-8000,rep:6}}]},
+   {pg:6,mem:'上一世你做商务拓展，每天写四十多封邮件。你记得：便宜的报价，后面常跟着投诉。',tag:'生意',title:'牛肉涨价了',text:'供应商发来新报价单，牛肉饼贵了一成。',
+    opts:[{l:'换便宜的供应商',n:'成本不变，口碑 -6',fx:{rep:-6}},{l:'自己扛下来',n:'本季成本率 +4%',fx:{cost:.04}}]} ],
+ [ {mem:'上一世，你把体检报告压在了一摞拒信下面。',tag:'生活',title:'体检报告',text:'医生在“胃”那一栏画了圈，问你一天吃几顿，几点睡。',
+    opts:[{l:'按时吃饭，少熬夜',n:'健康 +10，口碑 -1',fx:{health:10,rep:-1}},{l:'再撑一撑',n:'健康 -8',fx:{health:-8}}]},
+   {mem:'上一世，从来没有人这样写过你。',tag:'生活',title:'一位常客写了你的店',text:'她在小红书发了一篇笔记：“下班路上总有一盏灯亮着。”',
+    opts:[{l:'转发，并送她一张券',n:'现金 -3,000，口碑 +8',fx:{cash:-3000,rep:8}},{l:'默默存下截图',n:'口碑 +3',fx:{rep:3}}]} ],
+];
+
+
+
+const ENDINGS=[
+ {id:'broke',sub:'又是大后果。不过这一次，是你自己选的路。',t:'卷帘门拉下来了',hint:'现金断了。',p:()=>'现金断了，店撑到了第 '+S.q+' 个季度。招牌你没舍得扔，收在了床底下。大多数开过店的人，都有过这样一块招牌。'},
+ {id:'sick',sub:'大结果拿到了，是用身体换的。',t:'店活着，人垮了',hint:'健康低于 25。',p:()=>'账面是好看的，但你是在输液的时候看到它的。医生说，店可以请人看，胃不行。'},
+ {id:'alone',sub:'大结果拿到了，可是没有人一起庆祝。',t:'赢了生意，输了晚饭',hint:'关系低于 25。',p:()=>'这一年你没有缺过一天店。年夜饭那天，桌上给你留的那副碗筷没有人动。'},
+ {id:'branch',sub:'上一世等别人给结果，这一世你自己开出了第二个。',t:'第二家店',hint:'开出分店，并守住口碑。',p:()=>'一年前你还在纠结招牌用什么颜色，现在同样的招牌挂在了两条街上。'},
+ {id:'great',sub:'这一世，大结果。',t:'小店不小',hint:'钱、口碑、健康、关系，一样都不落下。',p:()=>'钱赚到了，熟客记得你的名字，你也还记得按时吃饭。这是最难的一种结局。'},
+ {id:'loss',sub:'结果还没来，但后果你扛住了。',t:'还在亏，但还开着',hint:'全年总账为负，但没有关门。',p:()=>'这一年总账是负的。可是每天早上依然有人推门进来，问今天有没有老样子。'},
+ {id:'alive',sub:'不算大结果，但这一次，结果是你自己的。',t:'活下来了',hint:'平平稳稳过完第一年。',p:()=>'没有暴富，也没有关门。对一家开了一年的小店来说，这已经赢过了很多人。'},
+];
+const seen=new Set();
+const FRAGS=[
+ {h:'宁波诺丁汉大学 硕士',d:'国际管理（市场营销），以 Merit（良好）毕业，全英文授课。',b:'学过营销：营销费用打八折'},
+ {h:'集美大学 & Keuka College 学士',d:'工商管理，中美合作办学。平均分 85.2，成绩前 10%。',b:'会看账：每季度多得 1 枚经营币'},
+ {h:'字节跳动 · 产品运营实习',d:'横向对比抖音、快手、微视，写出 10+ 页分析报告，拿到导师推荐信。',b:'做过竞品分析：价格线索免费'},
+ {h:'字节跳动 · 指标体系',d:'建议抖音商城采用 CPC + 集合竞价，搭了点击率、完播率、投诉率指标体系。',b:'搭过指标体系：口碑线索便宜 1 枚'},
+ {h:'国际学校 · 管培生',d:'对标 6 所学校，独立写出 20 章年度新媒体增长方案，覆盖 9 个账号（含 Instagram）。',b:'做过客群规划：更换客群不掉口碑'},
+ {h:'宁诺市场部 · 达人合作',d:'管理 5+ 位抖音 / 小红书 / Instagram 达人，5 条短视频播放 5000+，互动量提升 10%。',b:'认识达人：达人探店的客流加成从 22% 提到 30%'},
+ {h:'天齐集团 · 商务拓展',d:'日均 40+ 封定制邮件，促成 10+ 项合作，邮件转化率提升 5%。',b:'谈过合作：食材成本率 -2%'},
+ {h:'Brand Lab 品牌策略工作台',d:'用 ChatGPT 演练出一套策略 Skill，再用 Claude 做成 10 个模块的网页工具并上线。',b:'做过品牌策略：客群线索免费'},
+ {h:'校园活动 · 打卡集章',d:'为 See Me, Not My Gender 设计 5 个互动打卡点和集章兑换机制，目标参与 400 人以上。',b:'设计过集章：每季度口碑 +1'},
+ {h:'你正在玩的这个游戏',d:'从世界观到宣传页都由她构思，每一版都亲自试玩后提出修改。细节在“策划笔记”里。',b:'会做策划：产品线索免费'},
+];
+const CV=new Set(); let cvAll=false;
+function openCV(){
+  const n=cvAll?FRAGS.length:CV.size;
+  $('cvBody').innerHTML=`<p>钓鱼时捞到的漂流瓶里，装着上一世投出去、没有回音的简历。它们都是真的，属于这个游戏的作者：方鼎芸。每找回一页，上一世的经验就能在这一世的店里用上。</p>
+   <p class="note" style="margin-bottom:10px">已找回 ${n} / ${FRAGS.length} 页。每个季度可以去钓一次鱼。</p>`
+   +FRAGS.map((f,i)=>(cvAll||CV.has(i))?`<div class="frag"><b>${f.h}</b><span>${f.d}</span><span style="display:block;font-weight:800;color:var(--lettuce)">${CV.has(i)?'这一世用得上：':'钓到后生效：'}${f.b}</span></div>`:`<div class="frag lock">第 ${i+1} 页，还漂在河里。</div>`).join('')
+   +(n<FRAGS.length?'<button class="go alt" id="cvAll">不钓了，直接看完整简历</button>':'')
+   +'<h4>联系她</h4><p>方鼎芸，市场营销硕士<br>应聘游戏公司市场 / 宣传 / 策划岗<br>bixdf1@nottingham.edu.cn</p>';
+  const b=$('cvAll'); if(b) b.onclick=()=>{ cvAll=true; openCV(); };
+  if(!$('dlgCV').open) $('dlgCV').showModal();
+}
+$('cvClose').onclick=()=>$('dlgCV').close();
+
+/* ---------- 开场：上一世 ---------- */
+let introT=0, introI=0;
+const REJ=[['某大厂 校招','感谢投递。很遗憾，您未能进入下一轮。'],['某游戏公司','您的简历已进入人才库。'],['某互联网公司','笔试结果：未通过。'],['HR 小王','（已读）'],['某快消 管培','岗位已招满，祝您前程似锦。'],['某大厂 校招','很遗憾……']];
+function vIntro(i){
+  clearTimeout(introT); introI=i; $('scene').style.display='none'; $('hud').classList.remove('on');
+  const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const beats=[
+   ()=>`<p class="cap">上一世　秋招</p><div class="phone">${REJ.map((r,k)=>`<div class="ntf" style="animation-delay:${.25+k*.42}s"><b>${r[0]}</b>${r[1]}</div>`).join('')}</div>
+        <p class="cnt">已投递 <b id="cnt">0</b> 份</p>`,
+   ()=>`<div class="big"><span class="l">大结果，</span><span class="l" style="animation-delay:.35s">一个没有。</span><span class="l" style="animation-delay:.9s"><em>大后果，</em></span><span class="l" style="animation-delay:1.2s"><em>拿了一堆。</em></span></div><div style="text-align:center"><span class="stamp" style="animation-delay:1.9s">未通过</span></div>`,
+   ()=>`<div class="flash"></div><div class="big" style="font-size:30px"><span class="l" style="animation-delay:.7s">再睁开眼，</span><span class="l" style="animation-delay:1.1s">是秋招开始的前一天。</span></div>`,
+   ()=>`<div class="big"><span class="l">这一世，</span><span class="l" style="animation-delay:.3s">简历不投了。</span><span class="l" style="animation-delay:.9s"><em>开店，</em></span><span class="l" style="animation-delay:1.2s"><em>拿大结果。</em></span></div>
+        <button class="go" style="margin-top:28px" data-act="pick">开一家汉堡店</button><button class="link" data-act="title">先看看这是什么游戏</button>`];
+  app.innerHTML=`<div class="intro" ${i<3?'data-intro="1"':''}>${beats[i]()}${i<3?'<p class="tapn">点一下屏幕，看下一幕</p>':''}</div>${i<3?'<button class="skip" data-act="skipIntro">跳过开场，直接开店</button>':''}`;
+  window.scrollTo(0,0);
+  if(i===0){ let n=0; const el=$('cnt'), tick=()=>{ if(!el.isConnected) return; n=Math.min(99,n+3); el.textContent=n>=99?'99+':n; if(n<99) setTimeout(tick,80); }; still?el.textContent='99+':tick(); }
+  if(i<3 && !still) introT=setTimeout(()=>vIntro(i+1),[3600,3600,2800][i]);
+}
+app.addEventListener('click',e=>{ if(e.target.closest('[data-intro]') && !e.target.closest('button')) vIntro(introI+1); });
+
+
+/* ---------- 状态 ---------- */
+let S, D, CTX='main';
+const newShop=()=>({loc:null,target:null,price:'mid',menu:[],style:null,streak:0});
+function reset(){ S={name:'',logo:{shape:'circle',color:COLORS[0],icon:'burger'},shops:[],loan:null,
+  cash:0,rep:45,health:80,rel:70,coin:1,q:1,delivery:false,raise:0,mkt:'none',time:'mix',tab:0,
+  fished:false,mods:{},last:null,clues:{},log:[]}; D=newShop(); CTX='main'; }
+reset();
+const menuF=sh=>sh.menu.reduce((a,k)=>a+PROD[k].pref[sh.target],0)/sh.menu.length;
+const menuCost=sh=>sh.menu.reduce((a,k)=>a+PROD[k].cost,0)/sh.menu.length;
+const topOf=loc=>Object.keys(TG).sort((a,b)=>MATCH[loc][b]-MATCH[loc][a])[0];
+const effMatch=sh=>+(MATCH[sh.loc][sh.target]+(topOf(sh.loc)===sh.target?-.08:.08)*Math.min(3,sh.streak||0)).toFixed(2);
+const fit=sh=>effMatch(sh)*menuF(sh)*STYLE[sh.style].pref[sh.target];
+const mktM=k=>k==='big'&&CV.has(5)?1.30:MKT[k].m, mktCost=k=>Math.round(MKT[k].c*(CV.has(0)?.8:1));
+const clueCost=k=>({price:CV.has(2)?0:1,rep:CV.has(3)?1:2,crowd:CV.has(7)?0:1,prod:CV.has(9)?0:1}[k]);
+
+/* ---------- Logo ---------- */
+function logoSVG(size,pos){
+  const L=S.logo, c=L.color, w='#fff8ec';
+  const shape= L.shape==='circle' ? `<circle cx="50" cy="50" r="46" fill="${c}"/>`
+    : L.shape==='square' ? `<rect x="5" y="5" width="90" height="90" rx="18" fill="${c}"/>`
+    : `<path d="M50 4 L92 16 V52 C92 76 72 90 50 97 C28 90 8 76 8 52 V16 Z" fill="${c}"/>`;
+  const icon={
+    burger:`<path d="M26 44 C26 26 74 26 74 44 Z" fill="${w}"/><rect x="24" y="48" width="52" height="8" rx="4" fill="${w}"/><path d="M26 60 H74 C74 72 26 72 26 60 Z" fill="${w}"/>`,
+    crown:`<path d="M24 68 L20 34 L37 50 L50 28 L63 50 L80 34 L76 68 Z" fill="${w}"/>`,
+    flame:`<path d="M50 20 C62 36 72 44 68 60 C65 73 56 78 50 78 C40 78 31 71 31 58 C31 50 36 46 40 40 C42 46 45 48 47 48 C46 38 46 30 50 20 Z" fill="${w}"/>`,
+    star:`<path d="M50 20 L58.8 39.9 L80.4 42.1 L64.3 56.6 L68.8 77.9 L50 67 L31.2 77.9 L35.7 56.6 L19.6 42.1 L41.2 39.9 Z" fill="${w}"/>`}[L.icon];
+  return `<svg ${pos||''} xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100" role="img" aria-label="店铺标志">${shape}${icon}</svg>`;
+}
+
+/* ---------- 顶栏 ---------- */
+function hud(){
+  const h=$('hud'); if(!S.loan){ h.classList.remove('on'); return; }
+  h.classList.add('on');
+  const bar=(n,v)=>`<div class="need"><span>${n}</span><i style="--v:${v}%;--c:var(${v>=60?'--lettuce':v>=30?'--mustard':'--ketchup'})"></i><b>${v}</b></div>`;
+  h.innerHTML=`${logoSVG(34)}<div class="nm">${esc(S.name)}<small>第 ${Math.min(S.q,QUARTERS)} / ${QUARTERS} 季度${S.shops.length>1?'，两家店':''}</small></div>
+  <div class="money"><span>现金<b>${yuan(S.cash)}</b></span><span>经营币<b>${S.coin}</b></span></div>
+  <div class="needs">${bar('口碑',S.rep)}${bar('健康',S.health)}${bar('关系',S.rel)}</div>`;
+}
+
+/* ---------- 街景 ---------- */
+const SKIN='#f3cfa8', OUT='#26201c';
+function fig(type){
+  const body={stu:'#3d8b4b',white:'#39465a',fam:'#cf6a4a'}[type];
+  let s=`<g class="bob"><circle cx="0" cy="-27" r="5.5" fill="${SKIN}" stroke="${OUT}" stroke-width="1.2"/><path d="M-5.5 -28 a5.5 5.5 0 0 1 11 0 z" fill="${OUT}"/><rect x="-5.5" y="-21" width="11" height="14" rx="3" fill="${body}" stroke="${OUT}" stroke-width="1.2"/><rect x="-4" y="-7" width="3" height="7" fill="${OUT}"/><rect x="1" y="-7" width="3" height="7" fill="${OUT}"/>`;
+  if(type==='stu') s+=`<rect x="-9.5" y="-20" width="4.5" height="10" rx="1.5" fill="#f0ad2c" stroke="${OUT}" stroke-width="1"/>`;
+  if(type==='white') s+=`<rect x="5" y="-11" width="7" height="5.5" rx="1" fill="#7a5a3a" stroke="${OUT}" stroke-width="1"/>`;
+  if(type==='fam') s+=`<g transform="translate(10,0) scale(.62)"><circle cx="0" cy="-27" r="5.5" fill="${SKIN}" stroke="${OUT}" stroke-width="1.8"/><rect x="-5.5" y="-21" width="11" height="14" rx="3" fill="#f0ad2c" stroke="${OUT}" stroke-width="1.8"/><rect x="-4" y="-7" width="3" height="7" fill="${OUT}"/><rect x="1" y="-7" width="3" height="7" fill="${OUT}"/></g>`;
+  return s+'</g>';
+}
+
+function shopG(sh,night,mini){
+  const c=S.logo.color, nm=S.name||'你的店名', fs=nm.length<=5?14:nm.length<=7?11:8.5, wall=STYLE[sh.style||'retro'].wall;
+  let aw=''; for(let i=0;i<10;i++) aw+=`<path d="M${i*15} 30 h15 v13 a7.5 5 0 0 1 -15 0 z" fill="${i%2?'#fffaf0':c}" stroke="${OUT}" stroke-width="1"/>`;
+  const mood=S.health>=60?`<path d="M-4 3 q4 4 8 0" fill="none" stroke="${OUT}" stroke-width="1.4" stroke-linecap="round"/>`
+    :S.health>=30?`<path d="M-3.5 4 h7" stroke="${OUT}" stroke-width="1.4" stroke-linecap="round"/>`
+    :`<path d="M-4 5.5 q4 -3.5 8 0" fill="none" stroke="${OUT}" stroke-width="1.4" stroke-linecap="round"/><path d="M11 -6 q3 5 0 7 q-3 -2 0 -7" fill="#4aa3c9"/><path d="M-6 0 h4 M2 0 h4" stroke="#8a6f66" stroke-width="1"/>`;
+  const flower=S.rel>=60?`<circle cx="0" cy="-17" r="4.5" fill="#e86a8a" stroke="${OUT}" stroke-width="1"/><circle cx="0" cy="-17" r="1.6" fill="#f0ad2c"/><path d="M0 -12 v6" stroke="#3d8b4b" stroke-width="2"/>`
+    :S.rel>=30?`<circle cx="0" cy="-13" r="2.6" fill="#63b873" stroke="${OUT}" stroke-width="1"/><path d="M0 -11 v5" stroke="#3d8b4b" stroke-width="2"/>`
+    :`<path d="M0 -6 q-1 -5 5 -7" fill="none" stroke="#8a7a52" stroke-width="2"/><circle cx="5.5" cy="-12.5" r="2.2" fill="#8a7a52"/>`;
+  const deco={retro:`<path d="M0 104 h150 v16 h-150 z" fill="#cf3b27" opacity=".85"/><path d="M0 104 h15 v16 h-15 z M30 104 h15 v16 h-15 z M60 104 h15 v16 h-15 z" fill="#fffaf0" opacity=".9"/>`,
+    ins:`<circle cx="92" cy="50" r="3" fill="#e86a8a"/><circle cx="144" cy="50" r="3" fill="#e86a8a"/><path d="M0 110 h150 v10 h-150 z" fill="#f6b8c4"/>`,
+    wood:`<path d="M0 60 h8 M142 60 h8 M0 75 h8 M142 75 h8 M0 104 h150" stroke="#8a5a33" stroke-width="2"/>`,
+    fast:`<rect x="86" y="62" width="9" height="16" rx="2" fill="#2f7fa3" stroke="${OUT}" stroke-width="1"/><path d="M0 112 h150" stroke="#9aa7ad" stroke-width="3"/>`}[sh.style||'retro'];
+  return `<rect x="0" y="30" width="150" height="90" fill="${wall}"/>${deco}${night?'<rect x="0" y="30" width="150" height="90" fill="#1b1410" opacity=".45"/>':''}
+   <rect x="0" y="30" width="150" height="90" fill="none" stroke="${OUT}" stroke-width="2"/>
+   <rect x="8" y="0" width="134" height="30" rx="5" fill="#fffaf0" stroke="${OUT}" stroke-width="2"/>
+   ${logoSVG(24,'x="13" y="3"')}<text x="42" y="${15+fs*.36}" font-size="${fs}" font-weight="900" fill="#26201c" font-family="inherit">${esc(nm)}</text>
+   ${aw}
+   <rect x="10" y="56" width="74" height="40" rx="3" fill="${night?'#ffd98a':'#cfeaf2'}" stroke="${OUT}" stroke-width="2"/>
+   ${mini?'':`<g transform="translate(47,77)"><circle r="9" fill="${SKIN}" stroke="${OUT}" stroke-width="1.4"/><path d="M-9.5 -1 a9.5 9.5 0 0 1 19 0 q-9 -6 -19 0 z" fill="${OUT}"/><circle cx="-3.2" cy="-.5" r="1.1" fill="${OUT}"/><circle cx="3.2" cy="-.5" r="1.1" fill="${OUT}"/>${mood}</g><rect x="38" y="86" width="18" height="6" fill="#9db7e8" stroke="${OUT}" stroke-width="1.2"/>`}
+   <rect x="10" y="90" width="74" height="7" fill="#a06c40" stroke="${OUT}" stroke-width="1.5"/>
+   <rect x="98" y="54" width="40" height="66" rx="2" fill="#7a5a3a" stroke="${OUT}" stroke-width="2"/><rect x="104" y="60" width="28" height="26" rx="2" fill="${night?'#ffd98a':'#cfeaf2'}" stroke="${OUT}" stroke-width="1.2"/><circle cx="131" cy="94" r="2" fill="#f0ad2c"/>
+   <g transform="translate(91,120)"><path d="M-5 -6 h10 l-1.5 6 h-7 z" fill="#cf6a4a" stroke="${OUT}" stroke-width="1"/>${flower}</g>`;
+}
+function backdrop(loc,night){
+  const b=night?'#2c3a5c':'#b9c6d6', b2=night?'#34446b':'#a9b8ca', w=night?'#ffd98a':'#e9f4f8', st=`stroke="${OUT}" stroke-width="1.5"`;
+  const wins=(x,y,cols,rows,dx,dy)=>{let s='';for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)s+=`<rect x="${x+c*dx}" y="${y+r*dy}" width="6" height="7" fill="${w}" opacity="${night&&(r*3+c)%3==0?.25:1}"/>`;return s;};
+  const tree=(x,s)=>`<rect x="${x-2}" y="${178-22*s}" width="4" height="${22*s}" fill="#7a5a3a"/><circle cx="${x}" cy="${178-30*s}" r="${14*s}" fill="${S.q===3?'#e0903a':S.q===4?'#c9d3cf':'#63b873'}" ${st}/>`;
+  if(loc==='uni') return `<rect x="6" y="112" width="92" height="66" fill="#d9a08a" ${st}/>${wins(14,120,7,3,12,16)}<rect x="40" y="70" width="22" height="42" fill="#c98a72" ${st}/><path d="M38 70 l13 -16 l13 16 z" fill="#8a4f3d" ${st}/><circle cx="51" cy="84" r="6" fill="#fffaf0" ${st}/><path d="M51 84 v-4 M51 84 h3" stroke="${OUT}" stroke-width="1"/>${tree(285,1)}${tree(325,.8)}`;
+  if(loc==='office') return `<rect x="6" y="28" width="46" height="150" fill="${b}" ${st}/>${wins(12,36,4,11,10,13)}<rect x="56" y="62" width="40" height="116" fill="${b2}" ${st}/>${wins(62,70,3,8,11,13)}<rect x="266" y="40" width="42" height="138" fill="${b2}" ${st}/>${wins(272,48,3,10,11,13)}<rect x="312" y="78" width="42" height="100" fill="${b}" ${st}/>${wins(318,86,3,7,11,13)}`;
+  return `<rect x="6" y="96" width="88" height="82" fill="#e8c9a0" ${st}/>${wins(14,104,6,4,13,18)}<rect x="268" y="104" width="84" height="74" fill="#d8b98c" ${st}/>${wins(276,112,6,3,13,20)}${tree(250,.7)}<rect x="100" y="150" width="2" height="28" fill="${OUT}"/><circle cx="101" cy="148" r="4" fill="${night?'#ffe08a':'#fffaf0'}" ${st}/>`;
+}
+
+function scene(busy){
+  const night=isNight(), main=S.shops[0]||(CTX==='main'?D:null)||newShop(), loc=main.loc||'home', q=S.loan?Math.min(S.q,4):1;
+  const sky=night?'#16213a':['#bfe6f2','#8fd3f4','#f6d8a8','#d5dde6'][q-1];
+  const tg=main.target||'fam', match=MATCH[loc][tg];
+  const n=busy?9:Math.max(3,Math.round(2+S.rep/18)), dur=busy?3.2:9, enterP=Math.min(.9,.45*match+(S.rep-45)/200);
+  let wk=''; const types=Object.keys(TG);
+  for(let i=0;i<n;i++){ const t=i%4===3?types[(i+q)%3]:tg, enters=(i*7+q*3)%10 < enterP*10;
+    wk+=`<g class="wk ${enters?'in':'by'}" style="animation-duration:${dur*(enters?1:1.5)}s;animation-delay:${-(i*dur/n)}s"><g transform="translate(0,178)">${fig(t)}</g></g>`; }
+  let queue=''; const ql=S.loan?Math.floor(S.rep/25):1; for(let i=0;i<ql;i++) queue+=`<g transform="translate(${200-15*i},178)">${fig(tg)}</g>`;
+  let fx='';
+  if(night) fx+=`<circle cx="320" cy="26" r="11" fill="#ffe9a8"/><circle cx="324" cy="23" r="10" fill="${sky}"/>`+[30,90,150,210,250,60,180].map((x,i)=>`<circle cx="${x}" cy="${12+(i*17)%40}" r="1" fill="#fff"/>`).join('');
+  else if(q===2) fx+=`<circle cx="318" cy="28" r="14" fill="#ffd34d" stroke="${OUT}" stroke-width="1.5"/>`;
+  if(!night&&q<3) fx+=`<g class="cloud"><ellipse cx="0" cy="34" rx="22" ry="8" fill="#fff"/><ellipse cx="14" cy="28" rx="14" ry="8" fill="#fff"/></g>`;
+  if(q===3) for(let i=0;i<7;i++) fx+=`<rect class="fall" x="${20+i*50}" y="0" width="5" height="3" rx="1.5" fill="#d9772e" style="animation-duration:${5+i%3}s;animation-delay:${-i*.9}s"/>`;
+  if(q===4) for(let i=0;i<14;i++) fx+=`<circle class="fall" cx="${10+i*26}" cy="0" r="1.8" fill="#fff" style="animation-duration:${4+i%4}s;animation-delay:${-i*.6}s"/>`;
+  let coins=''; if(busy) for(let i=0;i<4;i++) coins+=`<g class="coin" style="animation-delay:${i*.28}s"><circle cx="${214+i*6}" cy="104" r="7" fill="#f0ad2c" stroke="${OUT}" stroke-width="1.5"/><text x="${214+i*6}" y="107.5" font-size="9" font-weight="900" text-anchor="middle" fill="#26201c">¥</text></g>`;
+  const season=['春','夏','秋','冬'][q-1];
+  $('scene').innerHTML=`<svg viewBox="0 0 360 190" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit">
+    <rect width="360" height="190" fill="${sky}"/>${fx}${backdrop(loc,night)}
+    <g transform="translate(105,58)">${shopG(main,night)}</g>
+    ${S.shops[1]?`<g transform="translate(272,118) scale(.5)">${shopG(S.shops[1],night,true)}</g>`:''}
+    <rect y="178" width="360" height="12" fill="${night?'#3a3f4d':q===4?'#eef2f4':'#cdbfa6'}"/><rect y="177" width="360" height="2" fill="${OUT}"/>
+    ${queue}${wk}${coins}
+    ${S.loan?`<g><rect x="8" y="8" width="62" height="20" rx="10" fill="#fffaf0" stroke="${OUT}" stroke-width="1.5"/><text x="39" y="22" font-size="11" font-weight="800" text-anchor="middle" fill="#26201c">${season}，${LOC[loc].n.slice(0,3)}</text></g>`:''}
+  </svg>`;
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>scene());
+
+function view(html,busy){ clearTimeout(introT); $('scene').style.display=''; app.innerHTML=html; hud(); scene(busy); window.scrollTo(0,0); }
+function keep(fn){ const y=window.scrollY; fn(); window.scrollTo(0,y); }
+const seg=(group,opts,cur)=>`<div class="seg">${Object.entries(opts).map(([k,o])=>`<button data-set="${group}" data-v="${k}" aria-pressed="${k===cur}">${o.n||o}${o.s?`<small>${o.s}</small>`:''}</button>`).join('')}</div>`;
+const menuChips=(sh)=>`<div class="chips">${Object.entries(PROD).map(([k,o])=>`<button data-act="menu" data-v="${k}" aria-pressed="${sh.menu.includes(k)}"><b>${o.n}</b><span>${o.d}</span></button>`).join('')}</div>`;
+const stepTag=n=>CTX==='main'?`开店 ${n} / 6`:`开分店 ${n-1} / 4`;
+
+/* ---------- 首页（宣传页） ---------- */
+function vTitle(){ view(`
+  <h1>小店人生</h1>
+  <p class="lead" style="margin-top:8px;font-size:16px;color:var(--ink)">上一世秋招，只拿到大后果。<br><b style="color:var(--ketchup)">这一世开店，拿大结果。</b></p>
+  <button class="go" style="margin-top:0" data-act="pick">开一家汉堡店</button>
+  <p class="note" style="text-align:center;margin-top:12px">不用下载，不用注册。一局 10 分钟。</p>
+  <div class="sell">
+    <div><b>你记得上一世</b><span>重生的人知道后果。每件事发生时，你可以回想上一世，看清每个选择会带来什么。但回想要花经营币。</span></div>
+    <div><b>河里漂着上一世的简历</b><span>累了就去钓鱼。漂流瓶里装着投出去没有回音的简历，一共 10 页，全是真的。</span></div>
+    <div><b>招牌自己画</b><span>店名、颜色、图案都由你定，它会挂在街上，也印在每一张账单上。</span></div>
+    <div><b>在地图上挑位置</b><span>大学城、写字楼、社区街角。卖什么、装成什么样、做谁的生意，全是你的决定。</span></div>
+    <div><b>生意和生活抢同一份时间</b><span>妈妈的生日撞上周六高峰，你回不回家？</span></div>
+  </div>
+  <h2 style="margin-top:22px">你会是哪一种店主？</h2>
+  <p class="lead">一共 7 种结局，已达成 ${seen.size} 种。</p>
+  <div class="ends">${ENDINGS.map(e=>`<div class="${seen.has(e.id)?'got':''}"><b>${e.t}</b><span>${seen.has(e.id)?'已达成':e.hint}</span></div>`).join('')}</div>
+  <button class="go" data-act="pick">现在就开店</button>
+  <button class="opt" style="margin-top:16px" disabled><b>披萨店（沙盘模式）</b><span>自己摆桌椅和动线。制作中，本 demo 未开放。</span></button>
+  <button class="link" data-act="cv">上一世的简历（已找回 ${cvAll?FRAGS.length:CV.size} / ${FRAGS.length} 页）</button>
+  <button class="link" data-act="note">这个游戏是怎么设计的</button>
+  <button class="link" data-act="intro">重看开场</button>`); }
+
+/* ---------- 开店流程 ---------- */
+function vBrand(){ view(`
+  <p class="step">开店 1 / 6</p><h2>给店起个名字，画个招牌</h2>
+  <p class="lead">边改边看上面那条街，招牌和雨棚会跟着变。</p>
+  <div class="logoBox"><span id="lgPrev">${logoSVG(84)}</span><div><div class="n" id="nmPrev">${esc(S.name)||'你的店名'}</div><small>汉堡店</small></div></div>
+  <div class="field"><label for="nm">店名（最多 10 个字）</label><input type="text" id="nm" maxlength="10" placeholder="例如：鼎鼎汉堡" value="${esc(S.name)}"></div>
+  <div class="field"><span class="lb">形状</span>${seg('shape',SHAPES,S.logo.shape)}</div>
+  <div class="field"><span class="lb">颜色</span><div class="seg" style="justify-content:flex-start;gap:12px">${COLORS.map(c=>`<button class="sw" data-set="color" data-v="${c}" aria-pressed="${c===S.logo.color}" aria-label="颜色 ${c}" style="background:${c}"></button>`).join('')}</div></div>
+  <div class="field"><span class="lb">图案</span>${seg('icon',ICONS,S.logo.icon)}</div>
+  <button class="go" data-act="brandOk">挂上招牌</button>`); }
+
+function mapSVG(){
+  const n=isNight(), land=n?'#2e2b25':'#eadfc4', road=n?'#4a463e':'#fffaf0', water=n?'#27506a':'#9fd3e6', park=n?'#2f5a3a':'#a8d5a0', o=`stroke="${OUT}" stroke-width="1"`;
+  const blk=(x,y,w,h,c)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="${c}" ${o}/>`;
+  return `<svg viewBox="0 0 340 230" xmlns="http://www.w3.org/2000/svg"><rect width="340" height="230" fill="${land}"/>
+  <path d="M210 -10 C190 60 250 110 215 160 C200 185 215 215 205 240 L245 240 C250 210 240 190 255 165 C290 110 230 60 250 -10 Z" fill="${water}"/>
+  <path d="M0 118 H340 M130 0 V230 M0 190 H200 M260 60 H340 M40 0 V118" stroke="${road}" stroke-width="9" fill="none"/>
+  <path d="M0 118 H340 M130 0 V230" stroke="${n?'#6a655a':'#d9cdb0'}" stroke-width="1" stroke-dasharray="6 6" fill="none"/>
+  <rect x="200" y="112" width="60" height="12" fill="${road}" ${o}/>
+  <ellipse cx="170" cy="62" rx="26" ry="20" fill="${park}"/><ellipse cx="300" cy="190" rx="30" ry="22" fill="${park}"/>
+  ${blk(52,18,34,22,'#d9a08a')}${blk(92,18,26,22,'#d9a08a')}${blk(52,48,22,26,'#c98a72')}${blk(80,52,38,20,'#d9a08a')}<circle cx="63" cy="92" r="9" fill="${park}" ${o}/>${blk(8,60,22,40,'#d9a08a')}
+  ${blk(268,18,20,32,'#a9b8ca')}${blk(294,10,24,40,'#b9c6d6')}${blk(266,72,26,34,'#b9c6d6')}${blk(298,72,30,34,'#a9b8ca')}
+  ${blk(14,134,26,18,'#e8c9a0')}${blk(46,134,26,18,'#e8c9a0')}${blk(78,134,26,18,'#d8b98c')}${blk(14,160,26,18,'#d8b98c')}${blk(46,160,26,18,'#e8c9a0')}${blk(140,134,30,22,'#e8c9a0')}${blk(140,200,40,20,'#d8b98c')}${blk(60,202,50,18,'#e8c9a0')}
+  </svg>`;
+}
+function vMap(){
+  const sel=D.loc, o=sel&&LOC[sel], mainLoc=S.shops[0]&&S.shops[0].loc;
+  view(`
+  <p class="step">${stepTag(2)}</p><h2>${CTX==='main'?'店开在哪里':'分店开在哪里'}</h2>
+  <p class="lead">点地图上的三个位置，看看那里路过的都是谁。</p>
+  <div class="map">${mapSVG()}
+    ${Object.entries(LOC).map(([k,l])=>`<button class="pin" data-act="pin" data-v="${k}" aria-pressed="${k===sel}" style="left:${l.x}%;top:${l.y}%"><i>${k===mainLoc?logoSVG(22):''}</i><b>${l.n}${k===mainLoc?'（总店）':''}</b></button>`).join('')}
+  </div>
+  ${o?`<div class="ev" style="margin-top:12px"><h2>${o.n}</h2><p>${o.d}</p>
+    <div class="row" style="margin-top:6px"><span>房租</span><span>${yuan(o.rent)} / 季度</span></div>
+    <div class="row"><span>基础客流</span><span>${o.base.toLocaleString('en-US')} 单 / 季度</span></div>
+    <p class="lb" style="font-size:13px;font-weight:800;margin-top:8px">路过的人</p>
+    ${Object.keys(TG).map(t=>`<div class="need" style="margin-top:4px"><span style="min-width:28px">${TG[t].n}</span><i style="--v:${o.mix[t]}%;--c:var(--sea)"></i><b>${o.mix[t]}%</b></div>`).join('')}
+    ${CTX==='branch'&&sel===mainLoc?'<p class="note">和总店开在同一片，两家店会互相分走约 15% 的客人。</p>':''}
+    </div><button class="go" data-act="locOk">就开在这里</button>`:''}
+  ${CTX==='branch'?'<button class="link" data-act="cancelBranch">先不开分店了</button>':''}`); }
+
+function vTarget(){ view(`
+  <p class="step">${stepTag(3)}</p><h2>主要做谁的生意</h2><p class="lead">${CTX==='main'?'你':'分店'}选在了${LOC[D.loc].n}。之后每季度可以换，但换一次口碑掉 3 点。</p>
+  ${Object.entries(TG).map(([k,o])=>`<button class="opt" data-act="target" data-v="${k}"><b>${o.n}</b><span>${o.d} 在${LOC[D.loc].n}占 ${LOC[D.loc].mix[k]}%。</span></button>`).join('')}`); }
+
+function vMenu(){ view(`
+  <p class="step">${stepTag(4)}</p><h2>菜单上放哪两款</h2><p class="lead">主打${TG[D.target].n}。每一群人爱吃的不一样，具体数字要开业后用线索去查。选 2 款，之后每季度可以换。</p>
+  ${menuChips(D)}
+  <button class="go" data-act="menuOk" ${D.menu.length===2?'':'disabled style="opacity:.5"'}>菜单定了（已选 ${D.menu.length} / 2）</button>`); }
+
+function vStyle(){ view(`
+  <p class="step">${stepTag(5)}</p><h2>店里装成什么样</h2><p class="lead">装修决定客人愿不愿意进来、坐不坐得住。选完看上面的店面。</p>
+  ${Object.entries(STYLE).map(([k,o])=>`<button class="opt" data-act="style" data-v="${k}" aria-pressed="${D.style===k}" style="${D.style===k?'background:var(--mustard);color:#26201c':''}"><b>${o.n}${o.cost?'　+'+yuan(o.cost):''}</b><span style="${D.style===k?'color:#5a4310':''}">${o.d}</span></button>`).join('')}
+  <button class="go" data-act="styleOk" ${D.style?'':'disabled style="opacity:.5"'}>${CTX==='main'?'装修完工':'开张（共 '+yuan(BRANCH_COST+(D.style?STYLE[D.style].cost:0))+'）'}</button>`); }
+
+function vLoan(){ view(`
+  <p class="step">开店 6 / 6</p><h2>要不要贷款</h2><p class="lead">设备、押金和基础装修一共 6 万，你有 9 万积蓄。${STYLE[D.style].cost?'你选的装修另外要 '+yuan(STYLE[D.style].cost)+'。':''}</p>
+  ${Object.entries(LOAN).map(([k,o])=>`<button class="opt" data-act="loan" data-v="${k}"><b>${o.n}</b><span>${o.d}</span></button>`).join('')}`); }
+
+/* ---------- 每季度 ---------- */
+function vPlan(){
+  const two=S.shops.length>1, sh=S.shops[S.tab], tOpts={}, pOpts={}, mOpts={}, tmOpts={};
+  for(const k in TG) tOpts[k]={n:TG[k].n};
+  for(const k in PRICE) pOpts[k]={n:PRICE[k].n,s:'¥'+PRICE[k].p+' / 单'};
+  for(const k in MKT) mOpts[k]={n:MKT[k].n,s:MKT[k].c?yuan(mktCost(k)):'¥0'};
+  for(const k in TIME) tmOpts[k]={n:TIME[k].n,s:TIME[k].d};
+  view(`
+  <p class="step">第 ${S.q} 季度：做决定</p><h2>这三个月怎么过</h2>
+  <p class="lead">${two?'两家店可以用不同的打法。':'店里的事和你自己的事，都在这一页。'}</p>
+  ${two?`<div class="tabs">${S.shops.map((s,i)=>`<button data-set="tab" data-v="${i}" aria-pressed="${i===S.tab}">${SHOPNAME[i]}<small>${LOC[s.loc].n}</small></button>`).join('')}</div>`:''}
+  <div class="panel">
+    <p class="ptitle">${two?SHOPNAME[S.tab]+'　':''}${LOC[sh.loc].n}，${STYLE[sh.style].n}${S.tab?'，店长代管（效率 85%）':''}</p>
+    <div class="field"><span class="lb">主打客群${sh.target!==sh.prevT?(CV.has(4)?'（更换：有客群规划经验，不掉口碑）':'（更换：口碑 -3，熟客重新积累）'):''}</span>${seg('sh.target',tOpts,sh.target)}</div>
+    <div class="field"><span class="lb">定价</span>${seg('sh.price',pOpts,sh.price)}</div>
+    <div class="field" style="margin-bottom:0"><span class="lb">菜单（选 2 款）</span>${menuChips(sh)}</div>
+  </div>
+  <div class="field"><span class="lb">营销${two?'（两家店共用）':''}</span>${seg('g.mkt',mOpts,S.mkt)}</div>
+  <div class="field"><span class="lb">你的时间</span>${seg('g.time',tmOpts,S.time)}</div>
+  <button class="go alt" data-act="fish" ${S.fished?'disabled style="opacity:.5"':''}>${S.fished?'这个季度已经钓过鱼了':'打烊后去河边坐一会儿（钓鱼）'}</button>
+  <button class="go" data-act="runQ">开门营业</button>
+  <button class="link" data-act="cv">上一世的简历（已找回 ${cvAll?FRAGS.length:CV.size} / ${FRAGS.length} 页）</button>`); }
+
+function vEvent(){
+  const e=S.event;
+  view(`<p class="step">第 ${S.q} 季度：发生了一件事</p>
+  <div class="ev"><span class="tg ${e.tag==='生意'?'biz':''}">${e.tag}</span><h2>${e.title}</h2><p>${e.text}</p></div>
+  ${S.evKnown?`<div class="mem"><b>上一世的记忆</b>${e.mem}${S.evFree?`<small>你已经找回「${FRAGS[e.pg].h}」那页简历，所以不用花经营币也想得起来。</small>`:''}</div>`:''}
+  ${e.opts.map((o,i)=>`<button class="opt" data-act="choose" data-v="${i}"><b>${o.l}</b><span>${S.evKnown?o.n:'后果看不清。'}</span></button>`).join('')}
+  ${S.evKnown?'':`<button class="go alt" data-act="recall" ${S.coin<1?'disabled style="opacity:.5"':''}>回想上一世，看清两种后果（1 枚经营币，你有 ${S.coin} 枚）</button>
+    <p class="note">${e.pg!=null?`这件事上一世你经历过类似的。找回「${FRAGS[e.pg].h}」那页简历，就能免费想起来。`:'生活里的事没有简历可查，只能花经营币去回想。也可以不回想，凭直觉选。'}</p>`}`); }
+
+let openT=0;
+function vOpen(){
+  const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  view(`<p class="step">第 ${S.q} 季度：营业中</p><h2>${esc(S.name)}开门了</h2>
+  <div class="months"><span>第 1 个月</span><span>第 2 个月</span><span>第 3 个月</span></div>
+  <p class="lead">看看街上，进店的都是谁，路过不进来的又是谁。</p>
+  <button class="link" data-act="skipOpen">跳过，直接看账单</button>`,true);
+  openT=setTimeout(runQuarter, still?700:2700);
+}
+
+/* ---------- 结算 ---------- */
+function shopCalc(sh,i,shops,rep,health,mods,mkt){
+  const same=shops.length>1&&shops[0].loc===shops[1].loc?.85:1;
+  const priceP=PRICE[sh.price].p+(mods.price||0);
+  const cust=LOC[sh.loc].base*fit(sh)*PRICE[sh.price].vol*TPRICE[sh.target][sh.price]*(0.6+rep/125)*mktM(mkt)
+    *(S.delivery?1.15:1)*(health<30?.85:1)*(mods.cust||1)*(i?.85:1)*same;
+  const rev=cust*priceP, food=rev*(FOOD-(CV.has(6)?.02:0)+menuCost(sh)+(S.delivery?.06:0)+(mods.cost||0));
+  const rent=LOC[sh.loc].rent, labor=LABOR+S.raise+(i?10000:0);
+  return {cust,priceP,rev,food,rent,labor,profit:rev-food-rent-labor};
+}
+function runQuarter(){
+  clearTimeout(openT);
+  const m=S.mods, before=S.snap;
+  const sw=S.shops.filter(sh=>sh.target!==sh.prevT); sw.forEach(sh=>sh.streak=0); const switched=CV.has(4)?0:sw.length; S.rep=clamp(S.rep-3*switched);
+  const repC=S.rep, healthC=S.health;
+  const rs=S.shops.map((sh,i)=>shopCalc(sh,i,S.shops,repC,healthC,m,S.mkt));
+  const mktC=mktCost(S.mkt), loan=LOAN[S.loan].pay, profit=rs.reduce((a,r)=>a+r.profit,0)-mktC-loan;
+  const avgFit=S.shops.reduce((a,sh)=>a+fit(sh),0)/S.shops.length, m0=S.shops[0];
+  const repParts=[[TIME[S.time].n,TIME[S.time].rep],[S.mkt==='none'?'没做营销':S.mkt==='big'?(avgFit>=1.1?'达人探店（口碑发酵）':'达人探店（尝鲜客失望）'):MKT[S.mkt].n,S.mkt==='big'?(avgFit>=1.1?3:-2):MKT[S.mkt].rep],
+    ['顾客满意度',avgFit>=1.3?3:avgFit>=1.1?2:avgFit<.9?-3:0],['定价',m0.price==='high'&&m0.target==='stu'?-2:m0.price==='low'?1:0]];
+  if(CV.has(8)) repParts.push(['集章老顾客',1]);
+  S.cash+=profit;
+  S.rep=clamp(S.rep+repParts.reduce((a,x)=>a+x[1],0));
+  if(switched) repParts.push(['更换客群',-3*switched]);
+  S.health=clamp(S.health+TIME[S.time].h+(S.shops.length>1?-6:0));
+  S.rel=clamp(S.rel+TIME[S.time].r);
+  const earned=1+(profit>0?1:0)+(S.rep>=60?1:0)+(CV.has(1)?1:0); S.coin+=earned;
+  S.last={rs,shops:S.shops.map(s=>({...s,menu:[...s.menu]})),m:{...m},mkt:S.mkt,mktC,loan,profit,repParts,earned,before,repC,healthC};
+  S.shops.forEach(sh=>{ sh.prevT=sh.target; sh.streak=(sh.streak||0)+1; });
+  S.clues={}; S.log.push(profit);
+  vBill();
+}
+const CLUES={crowd:{n:'客群线索',q:'进店的都是谁？装修对他们的胃口吗？',c:1},prod:{n:'产品线索',q:'菜单上哪款卖得动，哪款没人点？',c:1},
+  price:{n:'价格线索',q:'定价定对了吗？',c:1},rep:{n:'口碑线索',q:'口碑为什么变了？',c:2}};
+function clueText(id){
+  const L=S.last, two=L.shops.length>1;
+  if(id==='rep') return `回头客大约占 ${Math.round(20+S.rep*.5)}%。这个季度口碑的变化来自：`+L.repParts.map(x=>`${x[0]} ${x[1]>=0?'+':''}${x[1]}`).join('，')+'。口碑每高 10 点，客流多约 8%。';
+  return L.shops.map((sh,i)=>{
+    const pre=two?`<b style="display:inline">${SHOPNAME[i]}：</b>`:'', T=TG[sh.target].n, loc=LOC[sh.loc];
+    if(id==='crowd'){
+      const best=topOf(sh.loc), em=effMatch(sh), base=MATCH[sh.loc][sh.target];
+      const bs=Object.keys(STYLE).sort((a,b)=>STYLE[b].pref[sh.target]-STYLE[a].pref[sh.target])[0];
+      return pre+`${loc.n}路过的人里，${TG[best].n}占 ${loc.mix[best]}%。`
+        +(best===sh.target?`你主打的正是这群人，但同行也盯着他们：匹配度从 ${base} 降到了 ${em}，你每多做一个季度，跟进的对手就多一家。`
+          :`你主打的${T}在这里是少数（起步匹配 ${base}），但没人跟你抢，熟客在积累：现在是 ${em}，坚持下去每季度还会涨。换客群会清零。`)
+        +`装修上，${T}最喜欢「${STYLE[bs].n}」${bs===sh.style?'，你选对了。':`，你现在的「${STYLE[sh.style].n}」对他们的吸引力是 ${STYLE[sh.style].pref[sh.target]}，最好的是 ${STYLE[bs].pref[sh.target]}。`}`;
+    }
+    if(id==='prod'){
+      const rank=Object.keys(PROD).sort((a,b)=>PROD[b].pref[sh.target]-PROD[a].pref[sh.target]);
+      const bestF=(PROD[rank[0]].pref[sh.target]+PROD[rank[1]].pref[sh.target])/2, cur=menuF(sh);
+      return pre+`${T}最爱点的是${PROD[rank[0]].n}和${PROD[rank[1]].n}，最不买账的是${PROD[rank[4]].n}。`
+        +(cur>=bestF-.001?'你的菜单已经是最合他们口味的组合。':`你现在的菜单偏好系数是 ${cur.toFixed(2)}，换成前两款能到 ${bestF.toFixed(2)}，客流多约 ${Math.round((bestF/cur-1)*100)}%。`);
+    }
+    const alt=Object.keys(PRICE).map(k=>({k,p:shopCalc({...sh,price:k},i,L.shops,L.repC,L.healthC,L.m,L.mkt).profit})).sort((a,b)=>b.p-a.p)[0];
+    return pre+(alt.k===sh.price?`对${T}来说，「${PRICE[sh.price].n}」已经是三档里最赚的。`:`如果定的是「${PRICE[alt.k].n}」，这家店的利润大约会多 ${yuan(alt.p-L.rs[i].profit)}。`);
+  }).join('<br>');
+}
+function vBill(){
+  const L=S.last, rs=L.rs, b=L.before, d=(a,c)=>{const v=a-c;return (v>=0?'+':'')+v;}, sum=k=>rs.reduce((a,r)=>a+r[k],0);
+  const broke=S.cash<0, done=S.q>=QUARTERS, two=rs.length>1;
+  const canBranch=S.shops.length<2 && !done && !broke && S.q>=2, okBranch=S.cash>=BR_CASH && S.rep>=BR_REP;
+  view(`
+  <p class="step">第 ${S.q} 季度：账单</p>
+  <div class="rcpt">
+    <div class="hd">${esc(S.name)}</div><div class="sub">第 ${S.q} 季度结算单，共接待 ${Math.round(sum('cust')).toLocaleString('en-US')} 单</div>
+    ${two?rs.map((r,i)=>`<div class="row"><span>${SHOPNAME[i]}收入（均价 ¥${r.priceP}）</span><span>${yuan(r.rev)}</span></div>`).join('')
+         :`<div class="row"><span>营业收入（均价 ¥${rs[0].priceP}）</span><span>${yuan(rs[0].rev)}</span></div>`}
+    <div class="row"><span>食材</span><span>${yuan(-sum('food'))}</span></div>
+    <div class="row"><span>房租</span><span>${yuan(-sum('rent'))}</span></div>
+    <div class="row"><span>人工</span><span>${yuan(-sum('labor'))}</span></div>
+    ${L.mktC?`<div class="row"><span>营销</span><span>${yuan(-L.mktC)}</span></div>`:''}
+    ${L.loan?`<div class="row"><span>还贷</span><span>${yuan(-L.loan)}</span></div>`:''}
+    <div class="row t"><span>本季利润</span><span class="${L.profit>=0?'pos':'neg'}">${yuan(L.profit)}</span></div>
+    ${two?rs.map((r,i)=>`<div class="row"><span>其中${SHOPNAME[i]}（未扣营销和还贷）</span><span class="${r.profit>=0?'pos':'neg'}">${yuan(r.profit)}</span></div>`).join(''):''}
+    <div class="row"><span>手头现金</span><span class="${S.cash>=0?'':'neg'}">${yuan(S.cash)}</span></div>
+    <p class="delta">「${S.event.title}」你选了「${S.evPick.l}」：${S.evPick.n}。</p>
+    <p class="delta">口碑 ${d(S.rep,b.rep)}，健康 ${d(S.health,b.health)}，关系 ${d(S.rel,b.rel)}，经营币 +${L.earned}</p>
+  </div>
+  <p class="note">账单只写了结果。想知道原因，用经营币解锁下面的线索（你有 ${S.coin} 枚）。</p>
+  ${Object.entries(CLUES).map(([k,c])=> S.clues[k]
+     ? `<div class="clue open"><b>${c.n}</b>${clueText(k)}</div>`
+     : `<div class="clue"><b>${c.n}（未解锁）</b>${c.q}<br><button data-act="clue" data-v="${k}" ${S.coin<clueCost(k)?'disabled':''}>${clueCost(k)?'花 '+clueCost(k)+' 枚经营币查看':'免费查看（上一世的经验）'}</button></div>`).join('')}
+  ${canBranch?`<button class="opt" style="margin-top:14px" data-act="branch" ${okBranch?'':'disabled'}><b>开第二家店（${yuan(BRANCH_COST)} 起）</b><span>${okBranch?'重新在地图上选址，分店可以有自己的客群、菜单和装修。你的健康每季度多掉 6 点。':`门槛：现金不少于 ${yuan(BR_CASH)}，口碑不低于 ${BR_REP}。`}</span></button>`:''}
+  <button class="go" data-act="nextQ">${broke?'现金见底了':done?'看看这一年':'进入第 '+(S.q+1)+' 季度'}</button>`);
+}
+
+/* ---------- 结局与分享 ---------- */
+function pickEnding(sum){
+  if(S.cash<0) return 'broke'; if(S.health<25) return 'sick'; if(S.rel<25) return 'alone';
+  if(S.shops.length>1 && S.rep>=BR_REP) return 'branch';
+  if(S.cash>=180000 && S.rep>=65 && S.health>=50 && S.rel>=50) return 'great';
+  return sum<0?'loss':'alive';
+}
+function shareText(t){ return `上一世秋招只拿到大后果，这一世我开了一家「${S.name}」，结局是「${t}」。你会是哪一种店主？ ${location.href.split('#')[0]}`; }
+function makePoster(e,sum){
+  const c=document.createElement('canvas'), W=600,H=800; c.width=W; c.height=H; const x=c.getContext('2d');
+  const ff='"PingFang SC","HarmonyOS Sans SC","Noto Sans SC","Microsoft YaHei",sans-serif';
+  x.fillStyle='#f6e7c8'; x.fillRect(0,0,W,H);
+  x.fillStyle=S.logo.color; for(let i=0;i<12;i++){ if(i%2===0) x.fillRect(i*50,0,50,70); }
+  x.fillStyle='#fffaf0'; for(let i=0;i<12;i++){ if(i%2) x.fillRect(i*50,0,50,70); }
+  x.fillStyle='#26201c'; x.fillRect(0,70,W,6);
+  x.textAlign='center';
+  x.font='800 26px '+ff; x.fillText('上一世秋招拿大后果，这一世开店',W/2,300);
+  x.font='900 '+(S.name.length>7?44:54)+'px '+ff; x.fillText(S.name,W/2,250);
+  x.fillStyle='#cf3b27'; x.font='900 '+(e.t.length>7?58:72)+'px '+ff; x.fillText(e.t,W/2,410);
+  x.fillStyle='#fffaf0'; x.strokeStyle='#26201c'; x.lineWidth=4; x.setLineDash([12,8]); x.fillRect(60,460,480,190); x.strokeRect(60,460,480,190); x.setLineDash([]);
+  x.fillStyle='#26201c'; x.font='700 26px '+ff;
+  const main=S.shops[0], rows=[['全年利润',yuan(sum)],['开在',LOC[main.loc].n+(S.shops.length>1?'，两家店':'')],['口碑 / 健康 / 关系',S.rep+' / '+S.health+' / '+S.rel]];
+  rows.forEach((r,i)=>{ x.textAlign='left'; x.fillText(r[0],90,515+i*52); x.textAlign='right'; x.fillText(r[1],510,515+i*52); });
+  x.textAlign='center'; x.font='900 30px '+ff; x.fillText('你会是哪一种店主？',W/2,715);
+  x.font='500 20px '+ff; x.fillStyle='#7b6a58'; x.fillText('一局 10 分钟，7 种结局',W/2,755);
+  return new Promise(res=>{ const im=new Image(); im.onload=()=>{ x.drawImage(im,W/2-55,95,110,110); res(c.toDataURL('image/png')); };
+    im.onerror=()=>res(c.toDataURL('image/png')); im.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(logoSVG(110)); });
+}
+function vEnd(){
+  const sum=S.log.reduce((a,b)=>a+b,0), e=ENDINGS.find(x=>x.id===pickEnding(sum)); seen.add(e.id);
+  const main=S.shops[0];
+  view(`
+  <p class="step">第一年结束，结局 ${seen.size} / 7</p>
+  <h2 style="font-size:32px">${e.t}</h2><p style="font-size:15px;margin:8px 0 6px">${e.p()}</p><p style="font-size:15px;font-weight:800;color:var(--ketchup);margin-bottom:14px">${e.sub}</p>
+  <div class="rcpt">
+    <div class="row"><span>全年利润</span><span class="${sum>=0?'pos':'neg'}">${yuan(sum)}</span></div>
+    <div class="row"><span>手头现金</span><span>${yuan(S.cash)}</span></div>
+    <div class="row"><span>口碑 / 健康 / 关系</span><span>${S.rep} / ${S.health} / ${S.rel}</span></div>
+  </div>
+  <h2 style="margin-top:20px;font-size:18px">把这家店发给朋友</h2>
+  <p class="lead">长按图片保存，或者点下面的按钮。</p>
+  <img id="poster" class="poster" alt="结局海报：${esc(S.name)}，${e.t}">
+  <div class="share"><a class="go alt" id="dl" style="text-align:center;text-decoration:none" download="小店人生-${esc(S.name)}.png">保存海报</a><button class="go alt" data-act="copy" data-v="${esc(e.t)}">复制分享文案</button></div>
+  <p class="note" id="copyMsg" aria-live="polite"></p>
+  <button class="go" data-act="restart">再开一次店，换个结局</button>
+  <button class="link" data-act="cv">上一世的简历（已找回 ${cvAll?FRAGS.length:CV.size} / ${FRAGS.length} 页）</button>
+  <button class="link" data-act="home">回首页看结局图鉴</button>
+  <p class="note" style="text-align:center">出品：方鼎芸　bixdf1@nottingham.edu.cn</p>`);
+  makePoster(e,sum).then(u=>{ const im=$('poster'); if(im){ im.src=u; $('dl').href=u; } });
+}
+
+/* ---------- 交互 ---------- */
+function toggleMenu(sh,k){ const i=sh.menu.indexOf(k); if(i>=0) sh.menu.splice(i,1); else { sh.menu.push(k); if(sh.menu.length>2) sh.menu.shift(); } }
+app.addEventListener('input',e=>{ if(e.target.id==='nm'){ S.name=e.target.value.trim(); $('nmPrev').textContent=S.name||'你的店名'; scene(); } });
+app.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b||b.disabled) return;
+  const v=b.dataset.v, g=b.dataset.set;
+  if(g){
+    if(g==='tab'){ S.tab=+v; keep(vPlan); }
+    else if(g.startsWith('sh.')){ S.shops[S.tab][g.slice(3)]=v; keep(vPlan); }
+    else if(g.startsWith('g.')){ S[g.slice(2)]=v; keep(vPlan); }
+    else { S.logo[g]=v; b.parentNode.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); $('lgPrev').innerHTML=logoSVG(84); scene(); }
+    return;
+  }
+  switch(b.dataset.act){
+    case 'note': $('dlgNote').showModal(); break;
+    case 'cv': openCV(); break;
+    case 'intro': vIntro(0); break;
+    case 'skipIntro': reset(); vBrand(); break;
+    case 'title': reset(); vTitle(); break;
+    case 'home': reset(); vTitle(); break;
+    case 'pick': reset(); vBrand(); break;
+    case 'brandOk': if(!S.name){ S.name='无名汉堡'; } vMap(); break;
+    case 'pin': D.loc=v; keep(vMap); break;
+    case 'locOk': vTarget(); break;
+    case 'target': D.target=v; D.prevT=v; vMenu(); break;
+    case 'menu': if(S.loan&&CTX==='main'){ toggleMenu(S.shops[S.tab],v); if(S.shops[S.tab].menu.length<1) toggleMenu(S.shops[S.tab],v); keep(vPlan); } else { toggleMenu(D,v); keep(vMenu); } break;
+    case 'menuOk': vStyle(); break;
+    case 'style': D.style=v; keep(vStyle); break;
+    case 'styleOk':
+      if(CTX==='main'){ vLoan(); }
+      else { S.cash-=BRANCH_COST+STYLE[D.style].cost; S.shops.push(D); D=newShop(); CTX='main'; vBill(); }
+      break;
+    case 'loan': S.loan=v; S.cash=LOAN[v].cash-STYLE[D.style].cost; S.rep=clamp(S.rep+LOAN[v].rep); S.shops=[D]; D=newShop(); vPlan(); break;
+    case 'fish': startFish(); break;
+    case 'runQ': if(S.shops.some(s=>s.menu.length<2)){ alert('每家店的菜单要选满 2 款。'); break; }
+      S.event=EVENTS[S.q-1][Math.random()<.5?0:1]; S.mods={}; S.evFree=S.event.pg!=null&&CV.has(S.event.pg); S.evKnown=S.evFree; vEvent(); break;
+    case 'recall': if(S.coin>=1){ S.coin--; S.evKnown=true; keep(vEvent); } break;
+    case 'choose': { const fx=S.event.opts[+v].fx; S.evPick=S.event.opts[+v]; S.snap={rep:S.rep,health:S.health,rel:S.rel};
+      if(fx.flag) S[fx.flag]=true; if(fx.raise) S.raise+=fx.raise;
+      if(fx.cash) S.cash+=fx.cash; if(fx.rep) S.rep=clamp(S.rep+fx.rep);
+      if(fx.health) S.health=clamp(S.health+fx.health); if(fx.rel) S.rel=clamp(S.rel+fx.rel);
+      S.mods={cust:fx.cust,price:fx.price,cost:fx.cost}; vOpen(); break; }
+    case 'skipOpen': runQuarter(); break;
+    case 'clue': if(S.coin>=clueCost(v)){ S.coin-=clueCost(v); S.clues[v]=true; keep(vBill); } break;
+    case 'branch': CTX='branch'; D=newShop(); vMap(); break;
+    case 'cancelBranch': CTX='main'; D=newShop(); vBill(); break;
+    case 'nextQ': if(S.cash<0||S.q>=QUARTERS){ vEnd(); } else { S.q++; S.fished=false; S.tab=0; vPlan(); } break;
+    case 'copy': { const t=shareText(v), ok=()=>$('copyMsg').textContent='已复制：'+t, no=()=>$('copyMsg').textContent='复制没成功，请手动复制：'+t;
+      (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(ok,no); break; }
+    case 'restart': reset(); vBrand(); break;
+  }
+});
+$('noteClose').onclick=()=>$('dlgNote').close();
+const tbl=(id,head,rows)=>$(id).innerHTML='<tr>'+head.map(x=>`<th>${x}</th>`).join('')+'</tr>'+rows.map(r=>'<tr>'+r.map(x=>`<td>${x}</td>`).join('')+'</tr>').join('');
+const tgs=Object.keys(TG), tgn=tgs.map(t=>TG[t].n);
+tbl('tblLoc',['选址','基础客流/季','房租/季',...tgn.map(n=>n+'匹配')],Object.entries(LOC).map(([k,o])=>[o.n,o.base,yuan(o.rent),...tgs.map(t=>MATCH[k][t])]));
+tbl('tblProd',['产品偏好',...tgn,'成本率'],Object.values(PROD).map(o=>[o.n,...tgs.map(t=>o.pref[t]),(o.cost>=0?'+':'')+Math.round(o.cost*100)+'%']));
+tbl('tblStyle',['装修偏好',...tgn,'费用'],Object.values(STYLE).map(o=>[o.n,...tgs.map(t=>o.pref[t]),yuan(o.cost)]));
+
+/* ---------- 支线：钓鱼（抛竿、等漂、收线） ---------- */
+const fc=$('fc'), fx=fc.getContext('2d'), FW=360, FH=420, dpr=Math.min(devicePixelRatio||1,3);
+fc.width=FW*dpr; fc.height=FH*dpr; fx.scale(dpr,dpr);
+const FT={small:{n:'小鱼',h:3,win:.9,sz:11},bigf:{n:'大鱼',h:6,win:.6,sz:18},boot:{n:'旧靴子',h:0,win:1.2,sz:12},bottle:{n:'漂流瓶',h:0,win:1.2,sz:10}};
+const ROD={x:96,y:58}; let F=null;
+function startFish(){
+  const mk=(t,y,v)=>({t,x:30+Math.random()*(FW-60),y,v:(Math.random()<.5?-1:1)*v,gone:false});
+  F={casts:4,phase:'aim',bob:null,target:null,timer:0,t:0,hp:4,coin:0,got:[],frags:[],msg:'点水面，把钩抛过去',on:true,last:performance.now(),
+     things:[mk('small',170,26),mk('small',235,34),mk('small',310,22),mk('small',375,30),mk('bigf',280,16),mk('bigf',385,13),mk('boot',345,7)]};
+  const left=FRAGS.map((f,i)=>i).filter(i=>!CV.has(i)).slice(0,3), ys=[200,300,395];
+  left.forEach((fi,k)=>{ const b=mk('bottle',ys[k],9+k*3); b.frag=fi; F.things.push(b); });
+  if(!left.length) F.things.push(mk('bottle',390,9));
+  $('fishEnd').style.display='none'; fc.style.display='block';
+  $('dlgFish').showModal(); requestAnimationFrame(fishLoop);
+}
+function fishTap(x,y){
+  if(!F||!F.on) return;
+  if(F.phase==='aim'){
+    if(y<140) { F.msg='往水里抛'; return; }
+    F.bob={x:Math.max(14,Math.min(FW-14,x)),y:Math.max(150,Math.min(FH-16,y))};
+    const near=F.things.filter(o=>!o.gone).map(o=>({o,d:Math.hypot(o.x-F.bob.x,o.y-F.bob.y)})).sort((a,b)=>a.d-b.d)[0];
+    F.target=near&&near.d<95?near.o:null; F.phase='wait'; F.timer=F.target?0:1.6; F.msg=F.target?'等浮漂往下沉再收线':'这片水没什么动静';
+  } else if(F.phase==='wait' && F.target){ F.casts--; F.msg='收早了，它被吓跑了'; F.target.v*=-1; toAim(); }
+  else if(F.phase==='bite'){ F.phase='reel'; F.timer=.55; F.msg='上钩了'; }
+}
+function toAim(){ F.target=null; F.bob=null; F.phase=F.casts>0?'aim':'done'; F.timer=1.1; }
+fc.addEventListener('pointerdown',e=>{ const r=fc.getBoundingClientRect(); fishTap((e.clientX-r.left)/r.width*FW,(e.clientY-r.top)/r.height*FH); });
+addEventListener('keydown',e=>{ if(e.code==='Space'&&$('dlgFish').open&&F&&F.on){ e.preventDefault();
+  if(F.phase==='aim'){ const o=F.things.find(o=>!o.gone&&o.t==='bottle')||F.things.find(o=>!o.gone); if(o) fishTap(o.x,o.y); } else fishTap(0,200); } });
+$('dlgFish').addEventListener('cancel',e=>e.preventDefault());
+function fishLoop(now){
+  if(!F||!F.on) return;
+  const dt=Math.min(.05,(now-F.last)/1000); F.last=now; F.t+=dt;
+  for(const o of F.things){ if(o.gone||o===F.target) continue; o.x+=o.v*dt; if(o.x<16||o.x>FW-16) o.v*=-1; }
+  if(F.phase==='wait'){
+    if(F.target){ const o=F.target, dx=F.bob.x-o.x, dy=F.bob.y+10-o.y, d=Math.hypot(dx,dy);
+      if(d<5){ F.phase='bite'; F.timer=FT[o.t].win; F.msg='现在收线！'; } else { o.x+=dx/d*70*dt; o.y+=dy/d*70*dt; } }
+    else { F.timer-=dt; if(F.timer<=0){ F.msg='换个地方再抛'; F.phase='aim'; F.bob=null; } }
+  } else if(F.phase==='bite'){ F.timer-=dt; if(F.timer<=0){ F.casts--; F.msg='慢了一点，跑了'; F.target.v*=-1.5; toAim(); } }
+  else if(F.phase==='reel'){ F.timer-=dt; const o=F.target, k=Math.min(1,dt*7); o.x+=(ROD.x-o.x)*k; o.y+=(110-o.y)*k; F.bob.x=o.x; F.bob.y=o.y-10;
+    if(F.timer<=0){ const T=FT[o.t]; o.gone=true; F.casts--; F.hp+=T.h; F.coin+=T.coin||0; F.got.push(T.n);
+      if(o.frag!=null){ CV.add(o.frag); F.frags.push(o.frag); F.msg='漂流瓶里有一页简历：'+FRAGS[o.frag].h; } else F.msg=T.h?'一条'+T.n+'，健康 +'+T.h:'钓上来一只'+T.n;
+      toAim(); F.timer=1.5; } }
+  else if(F.phase==='done'){ F.timer-=dt; if(F.timer<=0){ endFish(); return; } }
+  // 画面
+  const cs=getComputedStyle(document.documentElement), ink=cs.getPropertyValue('--rule').trim(), sea=cs.getPropertyValue('--sea').trim();
+  fx.fillStyle=cs.getPropertyValue('--bun').trim(); fx.fillRect(0,0,FW,120);
+  fx.fillStyle=sea; fx.fillRect(0,120,FW,FH-120);
+  fx.fillStyle='rgba(255,255,255,.16)'; for(let i=0;i<5;i++) fx.fillRect(0,150+i*58+Math.sin(F.t+i)*4,FW,2);
+  // 栈桥与店主
+  fx.fillStyle='#a06c40'; fx.strokeStyle=ink; fx.lineWidth=2.5; fx.fillRect(0,112,120,12); fx.strokeRect(-2,112,122,12); fx.fillRect(100,124,8,30); fx.fillRect(30,124,8,30);
+  fx.fillStyle='#9db7e8'; fx.fillRect(48,86,20,26); fx.strokeRect(48,86,20,26);
+  fx.beginPath(); fx.arc(58,74,11,0,7); fx.fillStyle='#f3cfa8'; fx.fill(); fx.stroke();
+  fx.beginPath(); fx.arc(58,71,12,Math.PI*1.02,Math.PI*1.98); fx.lineTo(70,76); fx.lineTo(46,76); fx.closePath(); fx.fillStyle='#26201c'; fx.fill();
+  fx.beginPath(); fx.moveTo(66,96); fx.lineTo(ROD.x,ROD.y); fx.lineWidth=3; fx.strokeStyle='#7a5a3a'; fx.stroke();
+  // 水下的影子
+  for(const o of F.things){ if(o.gone) continue; const T=FT[o.t], d=o.v>0?1:-1; fx.fillStyle='rgba(10,30,45,.42)';
+    if(o.t==='small'||o.t==='bigf'){ fx.beginPath(); fx.ellipse(o.x,o.y,T.sz*1.3,T.sz*.6,0,0,7); fx.fill(); fx.beginPath(); fx.moveTo(o.x-d*T.sz*1.2,o.y); fx.lineTo(o.x-d*T.sz*2,o.y-T.sz*.55); fx.lineTo(o.x-d*T.sz*2,o.y+T.sz*.55); fx.fill(); }
+    else if(o.t==='boot'){ fx.fillRect(o.x-6,o.y-12,9,16); fx.fillRect(o.x-6,o.y+2,17,7); }
+    else { fx.fillStyle='rgba(235,250,240,.8)'; fx.strokeStyle=ink; fx.lineWidth=1.5; fx.beginPath(); fx.rect(o.x-5,o.y-7+Math.sin(F.t*2+o.x)*2,10,16); fx.rect(o.x-2.5,o.y-12+Math.sin(F.t*2+o.x)*2,5,5); fx.fill(); fx.stroke();
+           fx.fillStyle='#fffaf0'; fx.fillRect(o.x-3,o.y-3+Math.sin(F.t*2+o.x)*2,6,8); } }
+  // 线与浮漂
+  if(F.bob){ const dip=F.phase==='bite'?7:Math.sin(F.t*3)*1.5, bx=F.bob.x, by=F.bob.y+dip;
+    fx.beginPath(); fx.moveTo(ROD.x,ROD.y); fx.quadraticCurveTo((ROD.x+bx)/2,Math.min(ROD.y,by)-20,bx,by); fx.lineWidth=1.5; fx.strokeStyle=ink; fx.stroke();
+    fx.beginPath(); fx.arc(bx,by,6,0,7); fx.fillStyle='#fffaf0'; fx.fill(); fx.lineWidth=2; fx.stroke(); fx.beginPath(); fx.arc(bx,by,6,Math.PI,0); fx.fillStyle='#cf3b27'; fx.fill(); fx.stroke();
+    if(F.phase==='bite'){ fx.fillStyle='#f0ad2c'; fx.strokeStyle=ink; fx.lineWidth=2; fx.beginPath(); fx.arc(bx,by-30,13,0,7); fx.fill(); fx.stroke(); fx.fillStyle='#26201c'; fx.font='900 18px sans-serif'; fx.textAlign='center'; fx.fillText('!',bx,by-24);
+      fx.beginPath(); fx.arc(bx,by,10+((F.t*30)%14),0,7); fx.strokeStyle='rgba(255,255,255,.7)'; fx.lineWidth=1.5; fx.stroke(); } }
+  $('fishTime').textContent='饵 '+Math.max(0,F.casts)+' 份'; $('fishInfo').textContent=F.msg;
+  requestAnimationFrame(fishLoop);
+}
+function endFish(){
+  F.on=false; S.fished=true; S.health=clamp(S.health+F.hp); S.coin+=F.coin;
+  fc.style.display='none'; const e=$('fishEnd'); e.style.display='block';
+  e.innerHTML=`<h4 style="margin-top:0">收竿</h4><p>${F.got.length?'钓到：'+F.got.join('、')+'。':'什么也没钓到，但你在水边坐了一下午。'}</p>
+   <p>在河边坐了一下午，健康 +${F.hp}${F.coin?'，经营币 +'+F.coin:''}。</p>${F.frags.length?'<h4>漂流瓶里是上一世的简历</h4>'+F.frags.map(i=>`<div class="frag"><b>${FRAGS[i].h}</b><span>${FRAGS[i].d}</span><span style="display:block;font-weight:800;color:var(--lettuce)">这一世用得上：${FRAGS[i].b}</span></div>`).join('')+`<p class="note">已找回 ${CV.size} / ${FRAGS.length} 页。</p>`:''}<button class="go" id="fishOk">回店里</button>`;
+  $('fishOk').onclick=()=>{ $('dlgFish').close(); vPlan(); };
+}
+
+vIntro(0);
+})();
+
+</script>
+</body>
+</html>
